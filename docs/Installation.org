@@ -147,8 +147,8 @@ emacs --batch -l ~/.emacs.d/init.el
 #+end_src
 
 * 6. Install the icon font (recommended)
-Category icons — in the agenda and the file tree — are drawn from Google's
-*Material Symbols Outlined* font.
+Category icons — in the agenda and the file tree — and the agenda's task icons
+are drawn from Google's *Material Symbols Outlined* font.
 
 1. Download *Material Symbols Outlined* from [[https://fonts.google.com/icons][Google Fonts]] ("Download
    family") or the [[https://github.com/google/material-design-icons/tree/master/variablefont][google/material-design-icons]] repo.
@@ -162,7 +162,7 @@ Category icons — in the agenda and the file tree — are drawn from Google's
    - *Windows:* right-click the =.ttf= and choose *Install*.
 
 Without the font, everything still works — the file tree falls back to simple
-folder/file icons. Assigning icons to your own categories is covered in
+folder/file icons, and the agenda shows no icons. Assigning icons to your own categories is covered in
 [[file:Customization.org][Customization & appearance]].
 
 * 7. Install spell-check libraries (optional)
@@ -183,6 +183,21 @@ system speller; Russian and stricter checking need Hunspell dictionary files.
 If =enchant= isn't installed, the config still loads — typo checking simply
 stays off. Full details, including which languages are enabled and how to add
 dictionaries, are in [[file:Customization.org][Customization & appearance]].
+
+* 8. Install the task-icon matcher (optional)
+The agenda shows a small icon for what each task is about (see [[file:Agenda.org][Agenda]]).
+Choosing it needs Python 3 with three packages:
+
+#+begin_src bash
+pip install onnxruntime tokenizers numpy
+# or everything the helper scripts use:
+pip install -r ~/.emacs.d/requirements.txt
+#+end_src
+
+The first time the agenda opens, the language model the matcher uses (about
+250 MB) is downloaded once into =~/.cache/ps-task-icons/=; icons appear when it
+is done. Without Python or these packages, the config still loads — tasks
+simply show no icon, and a message says why.
 
 * Under the hood / Customize
 - The list of vaults is =vaults.eld= in the config directory (see [[file:Vaults.org][Vaults]]).

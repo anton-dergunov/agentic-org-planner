@@ -60,7 +60,7 @@ Each task line is laid out in aligned columns so it scans cleanly:
 - a *category icon* for the file the task came from (e.g. a briefcase for
   =Work.org=) — see [[file:Customization.org][Customization & appearance]] to map your own;
 - compact *pills* for the TODO state and priority;
-- a small emoji hinting at what the task is about;
+- a small icon for what the task is about, or none when nothing fits well;
 - the task text, with its tags after it;
 - a right-aligned *date/time pill* for its schedule or deadline.
 
@@ -141,10 +141,15 @@ appears next to the title. Click it to open the full [[file:Planning-tools.org][
   in =config.org= → /Org Mode → Agenda → Super agenda/. Edit the shared list
   =ps/agenda-day-super-groups= there to add, remove, or reorder sections; it also
   gives Org's stock agenda (=C-c a= then =a=) the same sections.
-- The aligned layout, pills, category/schedule icons, emoji, markup and folding
-  are the modules =lisp/ps-agenda-layout.el=, =ps-agenda-icons.el=,
-  =ps-schedule-icons.el=, =ps-agenda-emoji.el=, =ps-emphasis.el= and
-  =ps-agenda-fold.el=; their settings live in the matching =config.org= blocks.
+- The aligned layout, pills, category/schedule icons, markup and folding are the
+  modules =lisp/ps-agenda-layout.el=, =ps-agenda-icons.el=,
+  =ps-schedule-icons.el=, =ps-emphasis.el= and =ps-agenda-fold.el=; their
+  settings live in the matching =config.org= blocks.
+- The task icons are =lisp/ps-task-icons.el=; turn them off with
+  =ps/task-icons-enabled= in =config.org= → /Settings → Agenda task icons/. They
+  are chosen by =scripts/org_task_icon_matcher.py= (installing it: see
+  [[file:Installation.org][Installation]]) and remembered, so a task is matched only once; they are
+  left out of the Tasks view.
 - The schedule view is =lisp/ps-schedule-view.el=; defaults
   (=ps/schedule-view-style=, =ps/schedule-view-auto-refresh=) are in =config.org=
   → /Schedule view/.

@@ -1,6 +1,7 @@
 ;;; test-ps-agenda-layout.el --- ERT tests for ps-agenda-layout -*- lexical-binding: t; -*-
 
 (require 'ert)
+(require 'cl-lib)
 (add-to-list 'load-path "lisp")
 (require 'ps-agenda-layout)
 
@@ -88,14 +89,40 @@
         (ps/agenda-layout-category-display 'icon)
         (ps/agenda-layout-category-cols 3)
         (ps/agenda-layout-state-cols 13)
-        (ps/agenda-layout-priority-cols 4)
-        (ps/agenda-layout-emoji-cols 2))
-    (let ((c (ps/agenda-layout--columns)))
-      (should (= (plist-get c :cat) 1))
-      (should (= (plist-get c :state) 5))    ; 1 + 3 + 1
-      (should (= (plist-get c :pri) 19))     ; 5 + 13 + 1
-      (should (= (plist-get c :emoji) 24))   ; 19 + 4 + 1
-      (should (= (plist-get c :title) 27))))) ; 24 + 2 + 1
+        (ps/agenda-layout-priority-cols 4))
+    (cl-letf (((symbol-function 'ps/agenda-layout--effective-task-icon-cols)
+               (lambda () 2)))
+      (let ((c (ps/agenda-layout--columns)))
+        (should (= (plist-get c :cat) 1))
+        (should (= (plist-get c :state) 5))    ; 1 + 3 + 1
+        (should (= (plist-get c :pri) 19))     ; 5 + 13 + 1
+        (should (= (plist-get c :icon) 24))    ; 19 + 4 + 1
+        (should (= (plist-get c :title) 27)))))) ; 24 + 2 + 1
+
+(ert-deftest ps/agenda-layout--columns-no-task-icons ()
+  "Where no task icon can show, its column and gap collapse."
+  (let ((ps/agenda-layout-left-margin-cols 1)
+        (ps/agenda-layout-gap-cols 1)
+        (ps/agenda-layout-category-display 'icon)
+        (ps/agenda-layout-category-cols 3)
+        (ps/agenda-layout-state-cols 13)
+        (ps/agenda-layout-priority-cols 4))
+    (cl-letf (((symbol-function 'ps/agenda-layout--task-icons-shown-p)
+               #'ignore))
+      (let ((c (ps/agenda-layout--columns)))
+        (should (= (plist-get c :icon) 24))
+        (should (= (plist-get c :title) 24))))))
+
+(ert-deftest ps/agenda-layout--task-icon-cell ()
+  "A task with an icon name gets an image cell; one without gets nothing."
+  (cl-letf (((symbol-function 'ps/agenda-layout--task-icons-shown-p) (lambda () t))
+            ((symbol-function 'ps/material-icons-image)
+             (lambda (name &rest _) (list 'image :name name))))
+    (cl-letf (((symbol-function 'ps/task-icons-name-at-point) (lambda () "savings")))
+      (let ((cell (ps/agenda-layout--task-icon)))
+        (should (equal (get-text-property 0 'display cell) '(image :name "savings")))))
+    (cl-letf (((symbol-function 'ps/task-icons-name-at-point) #'ignore))
+      (should (null (ps/agenda-layout--task-icon))))))
 
 (ert-deftest ps/agenda-layout--columns-no-category ()
   "With no category column there is no leading category gap."
@@ -103,11 +130,12 @@
         (ps/agenda-layout-gap-cols 1)
         (ps/agenda-layout-category-display 'none)
         (ps/agenda-layout-state-cols 13)
-        (ps/agenda-layout-priority-cols 4)
-        (ps/agenda-layout-emoji-cols 2))
-    (let ((c (ps/agenda-layout--columns)))
-      (should (= (plist-get c :state) 1))    ; left, no category gap
-      (should (= (plist-get c :title) 23))))) ; 1 +13+1 +4+1 +2+1
+        (ps/agenda-layout-priority-cols 4))
+    (cl-letf (((symbol-function 'ps/agenda-layout--effective-task-icon-cols)
+               (lambda () 2)))
+      (let ((c (ps/agenda-layout--columns)))
+        (should (= (plist-get c :state) 1))    ; left, no category gap
+        (should (= (plist-get c :title) 23)))))) ; 1 +13+1 +4+1 +2+1
 
 ;;; -------------------------------------------------------
 ;;; schedule-group detection

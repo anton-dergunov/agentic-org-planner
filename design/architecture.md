@@ -61,7 +61,7 @@ re-run anything: `ps/reload-config` (`C-c p R`) does.
 | `tests/test-ps-*.el` | ERT tests, one file per module; `scripts/org_test.sh` runs them all |
 | `<vault>/workspace.org` | A vault's own organisation: icons, file sets, context tags, situations |
 | `<vault>/.ps/state.el`, `vaults.eld` | Machine-written state, read as data ([vaults.md](foundations/vaults.md)) |
-| `scripts/` | The Python emoji matcher, the dev launcher, test and screenshot helpers |
+| `scripts/` | The Python task-icon matcher, the dev launcher, test and screenshot helpers |
 | `patches/` | Patches to Emacs itself ([macos.md](platform/macos.md)) |
 | `samples/realistic/` | A sample vault, used by the dev launcher and tests |
 | `docs/`, `design/` | User documentation, and these notes ([README.md](README.md)) |
@@ -91,8 +91,8 @@ where it lives; this is the list in one place.
 - **The schedule view loads after the agenda layout**, and sets the flag that
   makes the layout skip the Schedule block
   ([schedule-view.md](planning/schedule-view.md)).
-- **The mode line's finalize hook runs at depth -90**, before the emoji and
-  layout passes.
+- **The mode line's finalize hook runs at depth -90**, before the task-icon
+  and layout passes.
 - **The AI context is written last.**
 
 ## Principles

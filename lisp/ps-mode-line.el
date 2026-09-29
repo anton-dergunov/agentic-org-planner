@@ -63,8 +63,8 @@
 (declare-function ps/situations-find "ps-situations" (key))
 ;; Set by `ps/situations--stash' on every agenda build; nil outside a Situation view.
 (defvar ps/situations-current-key)
-;; Defined by ps-agenda-emoji (a defcustom); set buffer-locally per agenda view.
-(defvar ps/agenda-emoji-enabled)
+;; Defined by ps-task-icons (a defcustom); set buffer-locally per agenda view.
+(defvar ps/task-icons-enabled)
 ;; Set by org-agenda before `org-agenda-finalize'; identifies the built view.
 (defvar org-agenda-redo-command)
 ;; Let-bound by the Calendar custom command; the displayed span.  Used to label
@@ -552,7 +552,7 @@ warning face."
 (defun ps/mode-line--agenda-finalize ()
   "Apply per-view mode line/chrome to the agenda buffer on every build.
 Runs from `org-agenda-finalize-hook' at a negative depth, before the
-emoji/layout hooks, so the emoji toggle takes effect for this render.
+task-icon/layout hooks, so the task-icon toggle takes effect for this render.
 
 The view is derived intrinsically: `org-agenda-redo-command' is `org-todo-list'
 for the Tasks view; the Calendar custom command let-binds
@@ -584,8 +584,8 @@ Agenda.  Robust regardless of how the build was triggered \(wrapper, dispatcher,
       ;; clear it on every other view so a stale count never leaks into Calendar/Tasks.
       (when (or tasks calendar situation)
         (setq-local ps/mode-line--agenda-conflict-count nil))
-      ;; Disable the semantic-emoji decoration in the (long) Tasks view.
-      (setq-local ps/agenda-emoji-enabled (not tasks))
+      ;; No task icons in the (long) Tasks view.
+      (setq-local ps/task-icons-enabled (not tasks))
       ;; Line-number gutter only in Tasks; re-applied so a redo can't drop it.
       (display-line-numbers-mode (if tasks 1 0))
       ;; Agenda buffers are regenerated — never accumulate undo data.
@@ -687,7 +687,7 @@ or a heading path worth reading.  They fall through to
 (defun ps/mode-line-setup ()
   "Enable the planning-focused mode line and frame title."
   (add-hook 'org-mode-hook #'ps/mode-line--org-setup)
-  ;; Negative depth: run before the emoji/layout finalize hooks.
+  ;; Negative depth: run before the task-icon/layout finalize hooks.
   (add-hook 'org-agenda-finalize-hook #'ps/mode-line--agenda-finalize -90)
   ;; The default rather than a hook per mode: what is left over here is
   ;; "everything that is not a plan file or a planning view", and a list of

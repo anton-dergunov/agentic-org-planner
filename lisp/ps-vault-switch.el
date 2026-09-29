@@ -104,7 +104,7 @@ eleven and saying which one broke beats stopping in the middle."
   (dolist (symbol '(ps/ai-context--save-timer
                     ps/file-tree--follow-timer
                     ps/conflicts--agenda-timer
-                    ps/agenda-emoji--timer))
+                    ps/task-icons--timer))
     (when (and (boundp symbol) (timerp (symbol-value symbol)))
       (cancel-timer (symbol-value symbol))
       (set symbol nil)))

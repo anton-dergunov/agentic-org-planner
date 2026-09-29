@@ -26,7 +26,7 @@ Org's time grid is a column of ticks with tasks laid over it:
 time prefix:
 
 ```
-HH:MM-HH:MM ┆ [category icon] [STATE] [PRI] [emoji]  Title…
+HH:MM-HH:MM ┆ [category icon] [STATE] [PRI] [task icon]  Title…
 ```
 
 Because of that prefix, the Schedule's columns do not line up with the other

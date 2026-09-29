@@ -128,7 +128,7 @@ All self-contained logic lives in =lisp/ps-*.el=.
   (require 'ps-done)
   (require 'ps-org-save)
   (require 'ps-git-sync)
-  (require 'ps-agenda-emoji)
+  (require 'ps-task-icons)
   (require 'ps-material-icons)
   (require 'ps-agenda-icons)
   (require 'ps-agenda-layout)
@@ -779,32 +779,30 @@ A buffer whose file *also* changed on disk is never saved over; it is listed in
         ps/org-link-title-max-length  200)
 #+end_src
 
-** Agenda emoji matcher (ps-agenda-emoji.el)
-The agenda appends a semantic emoji to each task. Matches come from
-=scripts/org_emoji_matcher.py= and are kept in a persistent on-disk cache, so a
-warm agenda render reuses cached emojis and never spawns Python.
+** Agenda task icons (ps-task-icons.el)
+Each agenda task gets a Material Symbols icon for what it is about, or none
+when nothing fits well. Matches come from =scripts/org_task_icon_matcher.py=
+running the matcher bundle in =bundle-dir= (made by the task-concept-retrieval
+project), and are kept in a persistent on-disk cache, so a warm agenda render
+reuses cached icons and never starts Python. Replacing the bundle discards the
+cache automatically. The icon is drawn in its own column by the agenda layout
+below, in the colour of the category icons (=ps/material-icons-color=).
 
-Set =ps/agenda-emoji-enabled= to nil to turn the agenda emojis off entirely.
-=cache-tag= identifies the model/threshold the cache was built for: bump it
-(and, if you like, set =EMOJI_MODEL= / =EMOJI_THRESHOLD= for the script) to
-invalidate the cache after changing the matcher. The emoji is drawn in its own
-reserved column by the agenda layout below (=ps/agenda-layout-emoji-cols=).
+Set =ps/task-icons-enabled= to nil to turn the task icons off entirely.
 #+begin_src emacs-lisp
-  (setq ps/agenda-emoji-enabled      t   ; set to nil to disable agenda emojis
-        ps/agenda-emoji-matcher-path
-        (expand-file-name "scripts/org_emoji_matcher.py" user-emacs-directory)
-        ps/agenda-emoji-cache-file
-        (expand-file-name "emoji_matcher/task_cache.json"
-                          (expand-file-name ".cache" "~"))
-        ps/agenda-emoji-cache-tag    "bge-small-en-v1.5@0.50"
-        ;; Emoji fonts are already scaled to the text line box by
-        ;; `ps/font-rescale-alist', so no extra shrink is needed here.
-        ps/agenda-emoji-face         '(:height 1.0))
+  (setq ps/task-icons-enabled      t   ; set to nil to disable task icons
+        ps/task-icons-matcher-path
+        (expand-file-name "scripts/org_task_icon_matcher.py" user-emacs-directory)
+        ps/task-icons-bundle-dir
+        (expand-file-name "icons/task-matcher" user-emacs-directory)
+        ps/task-icons-cache-file
+        (expand-file-name "ps-task-icons/task_cache.json"
+                          (expand-file-name ".cache" "~")))
 #+end_src
 
 ** Agenda layout (ps-agenda-layout.el)
 The agenda task lines are re-laid into aligned columns:
-=[category] [STATE] [PRIORITY] [emoji]  Title… [tags]   [when]=. State, priority,
+=[category] [STATE] [PRIORITY] [icon]  Title… [tags]   [when]=. State, priority,
 tags and the relative date ("11d ago") are drawn as =org-modern= badges; titles
 line up across every section and are truncated (full text shown on hover) when
 they would overflow.
@@ -830,7 +828,6 @@ they would overflow.
         ps/agenda-layout-state-labels     nil     ; e.g. '(("WAIT" . "W"))
         ps/agenda-layout-truncate         t
         ps/agenda-layout-priority-cols    3
-        ps/agenda-layout-emoji-cols       2
         ps/agenda-layout-category-cols    2
         ps/agenda-layout-right-margin-cols 1)
 #+end_src
@@ -1633,16 +1630,16 @@ to land in Org's built-in keyword search instead.
   (setq org-fast-tag-selection-single-key 'expert)
 #+end_src
 
-*** Aligned layout, emoji, folding, conflict check
+*** Aligned layout, task icons, folding, conflict check
 The redesigned agenda layout lives in =lisp/ps-agenda-layout.el= (aligned
-columns + face-based badges). =ps-agenda-emoji.el=
-feeds it semantic emojis (via =scripts/org_emoji_matcher.py=);
+columns + face-based badges). =ps-task-icons.el=
+feeds it task icons (via =scripts/org_task_icon_matcher.py=);
 =ps-agenda-fold.el= adds collapsible sections. The conflict-check agenda hook
 from =ps-conflicts= is also registered here. Agenda lines are truncated (no
 wrapping) so the right-aligned scheduling pill always lands on screen.
 #+begin_src emacs-lisp
   (ps/agenda-layout-setup)
-  (ps/agenda-emoji-setup)
+  (ps/task-icons-setup)
   (ps/agenda-fold-setup)
   (add-hook 'org-agenda-finalize-hook #'ps/conflicts--agenda-schedule-check)
   (add-hook 'org-agenda-mode-hook (lambda () (setq truncate-lines t)))
@@ -2596,7 +2593,7 @@ recovery settings block above.
   ;; `org-todo-list' so the native keyword-selector header is shown (press
   ;; e.g. `1 r' to switch keyword); filter live with / (tag), = (regexp),
   ;; < (category), _ (effort).  The mode line, line-number gutter, and
-  ;; emoji-off are applied by `ps/mode-line--agenda-finalize', keyed off the
+  ;; task-icons-off are applied by `ps/mode-line--agenda-finalize', keyed off the
   ;; dynamically-bound view name below.
   (defun ps/show-tasks ()
     "Open the Tasks view: all open tasks (`org-todo-list')."

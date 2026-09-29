@@ -3,7 +3,7 @@
 ;;; Commentary:
 ;; Re-lays each org-agenda task line into aligned columns:
 ;;
-;;   [category icon] [STATE badge] [PRIORITY badge] [emoji]  Title… [tags]   [sched badge]
+;;   [category icon] [STATE badge] [PRIORITY badge] [task icon]  Title… [tags]   [sched badge]
 ;;
 ;; The work happens on `org-agenda-finalize-hook'.  For every item line we read
 ;; org-agenda's own per-line text properties (`org-marker', `todo-state',
@@ -12,7 +12,10 @@
 ;; text (face-based badges using `org-modern' faces) and `(space :align-to COL)'
 ;; separators.  Category icons remain SVG images.  Because the column positions
 ;; are fixed (in character columns) and `:align-to' ignores the pixel width of
-;; preceding images, task titles line up across every section.
+;; preceding images, task titles line up across every section.  The task icon
+;; (what the task is about) comes from `ps-task-icons', which owns the names;
+;; it is drawn here like a category icon, and its column is dropped when no
+;; icon can be shown (text terminal, icons off for the view).
 ;;
 ;; The line's text is deleted and the display string inserted in its place
 ;; (`ps/agenda-layout--replace-line'), and org-agenda's navigation properties are
@@ -72,7 +75,7 @@ the query; the Agenda view (`agenda') does neither.
 (declare-function org-get-scheduled-time "org" (pom &optional inherit))
 (declare-function ps/material-icons-image "ps-material-icons" (name &optional ascent height))
 (declare-function ps/material-icons-available-p "ps-material-icons" ())
-(declare-function ps/agenda-emoji-lookup "ps-agenda-emoji" (title))
+(declare-function ps/task-icons-name-at-point "ps-task-icons" ())
 (declare-function ps/situations-plate-label "ps-situations" (&optional key))
 (declare-function ps/situations-plate-icon "ps-situations" (&optional key))
 (declare-function ps/situations-switch "ps-situations" (&optional event))
@@ -198,10 +201,6 @@ When nil, the width is derived at render time from the longest keyword in
   "Width reserved for the priority badge, in character columns."
   :type 'integer :group 'ps-agenda-layout)
 
-(defcustom ps/agenda-layout-emoji-cols 2
-  "Width reserved for the semantic emoji, in character columns."
-  :type 'integer :group 'ps-agenda-layout)
-
 (defcustom ps/agenda-layout-right-margin-cols 2
   "Empty margin kept to the right of the scheduling badge, in character columns."
   :type 'integer :group 'ps-agenda-layout)
@@ -213,11 +212,6 @@ Each entry is (TYPE-SUBSTRING . GLYPH); the glyph is prepended to the
 relative-date badge text for items whose `type' text property contains
 TYPE-SUBSTRING.  Set to nil to disable leading glyphs entirely."
   :type '(alist :key-type string :value-type string)
-  :group 'ps-agenda-layout)
-
-(defcustom ps/agenda-layout-emoji-face nil
-  "Face spec applied to the in-column semantic emoji, or nil for none."
-  :type '(choice (const :tag "None" nil) sexp)
   :group 'ps-agenda-layout)
 
 ;;; Faces
@@ -299,10 +293,20 @@ The thin box makes them read as clickable."
     (when (and m (markerp m) (marker-buffer m))
       (org-with-point-at m (nth 3 (org-heading-components))))))
 
-(defun ps/agenda-layout--emoji (title)
-  "Return the semantic emoji for TITLE, or nil."
-  (when (and title (fboundp 'ps/agenda-emoji-lookup))
-    (ps/agenda-emoji-lookup title)))
+(defun ps/agenda-layout--task-icons-shown-p ()
+  "Non-nil when this agenda buffer can show task icons at all."
+  (and (display-graphic-p)
+       (bound-and-true-p ps/task-icons-enabled)
+       (fboundp 'ps/task-icons-name-at-point)
+       (fboundp 'ps/material-icons-available-p)
+       (ps/material-icons-available-p)))
+
+(defun ps/agenda-layout--task-icon ()
+  "Return a cell displaying the task icon for the item line at point, or nil."
+  (when (ps/agenda-layout--task-icons-shown-p)
+    (when-let* ((name (ps/task-icons-name-at-point))
+                (img (ps/material-icons-image name)))
+      (ps/agenda-layout--image-cell img))))
 
 (defun ps/agenda-layout--header-schedule-p (header)
   "Non-nil when HEADER names the Schedule (time-grid) group itself.
@@ -444,6 +448,10 @@ SVG's 24×20 aspect at the configured pixel height); other frames fall back to
     ('both (+ (ps/agenda-layout--icon-cols) 1 ps/agenda-layout-category-name-cols))
     (_     (ps/agenda-layout--icon-cols))))
 
+(defun ps/agenda-layout--effective-task-icon-cols ()
+  "Return the task-icon column width: an icon's width, or 0 when none can show."
+  (if (ps/agenda-layout--task-icons-shown-p) (ps/agenda-layout--icon-cols) 0))
+
 (defun ps/agenda-layout--columns ()
   "Return a plist of column start positions (in character-width units).
 Widths are the fields' measured rendered sizes on graphical frames, so every
@@ -454,9 +462,10 @@ still line up across rows.  Positions may be fractional."
          (cat-cols (ps/agenda-layout--effective-category-cols))
          (state (+ left cat-cols (if (> cat-cols 0) gap 0)))
          (pri (+ state (ps/agenda-layout--effective-state-cols) gap))
-         (emoji (+ pri (ps/agenda-layout--effective-priority-cols) gap))
-         (title (+ emoji ps/agenda-layout-emoji-cols gap)))
-    (list :cat left :state state :pri pri :emoji emoji :title title)))
+         (icon (+ pri (ps/agenda-layout--effective-priority-cols) gap))
+         (icon-cols (ps/agenda-layout--effective-task-icon-cols))
+         (title (+ icon icon-cols (if (> icon-cols 0) gap 0))))
+    (list :cat left :state state :pri pri :icon icon :title title)))
 
 (defun ps/agenda-layout--window-cols ()
   "Return the agenda window's text width in columns (fallback 80)."
@@ -607,7 +616,7 @@ COLS is the column plist; SCHEDULE-COMPACT is non-nil for compact Schedule rows.
          (tod (org-get-at-bol 'time-of-day))
          (dur (org-get-at-bol 'duration))
          (pri (ps/agenda-layout--priority-char))
-         (emoji (ps/agenda-layout--emoji title))
+         (icon (ps/agenda-layout--task-icon))
          ;; The Calendar is date-scoped (the day header / control row carries the
          ;; date), so a relative-date pill ("4w ago") has no meaning there: a
          ;; timed item shows its time (the same subtle pill as the Agenda, but
@@ -643,12 +652,8 @@ COLS is the column plist; SCHEDULE-COMPACT is non-nil for compact Schedule rows.
     (push (ps/agenda-layout--space-to (plist-get cols :pri)) parts)
     (when pri
       (push (ps/agenda-layout--priority-text pri) parts))
-    (push (ps/agenda-layout--space-to (plist-get cols :emoji)) parts)
-    (when emoji
-      (push (if ps/agenda-layout-emoji-face
-                (propertize emoji 'face ps/agenda-layout-emoji-face)
-              emoji)
-            parts))
+    (push (ps/agenda-layout--space-to (plist-get cols :icon)) parts)
+    (when icon (push icon parts))
     (push (ps/agenda-layout--space-to title-col) parts)
     ;; `add-face-text-property' rather than `propertize ... 'face': the latter
     ;; would replace the per-span emphasis faces instead of layering on top of

@@ -1,0 +1,43 @@
+{
+  "tag": "M3-6e5323f90844",
+  "format": 1,
+  "method": "M3",
+  "source": "task-concept-retrieval@6db6c8f",
+  "icons": "names.txt",
+  "encoder": {
+    "name": "intfloat/multilingual-e5-small (Xenova ONNX, fp16)",
+    "model": {
+      "url": "https://huggingface.co/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/onnx/model_fp16.onnx",
+      "sha256": "0e0fe349c99ea21c6f3aa273af21f7fb753c1e1174ef1647032029c2be3251c3",
+      "size": 235336732
+    },
+    "tokenizer": {
+      "url": "https://huggingface.co/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/tokenizer.json",
+      "sha256": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39",
+      "size": 17082730
+    },
+    "query_prefix": "query: ",
+    "max_length": 512
+  },
+  "query": {
+    "inputs": [
+      "title"
+    ],
+    "normalize": "org-plain",
+    "body_chars": 400
+  },
+  "dense": {
+    "matrix": "dense.npy",
+    "prior": "prior.npy"
+  },
+  "bm25": {
+    "matrix": "bm25.npz",
+    "token_pattern": "[^\\W_]+",
+    "saturation": 8.0
+  },
+  "fusion": {
+    "rrf_k": 60,
+    "pool": 50,
+    "threshold": 3.6
+  }
+}

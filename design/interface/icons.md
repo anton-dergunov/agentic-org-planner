@@ -66,6 +66,11 @@ is why the maps are vault-scoped and reset on a switch
 - the folder listing, which reuses the tree's folder and file icons rather than
   restating them ([opening-and-navigation.md](../files-and-windows/opening-and-navigation.md)).
 
+**Task icons use the same pipeline without a map.** The agenda's per-task icon
+is a glyph name chosen by a matcher rather than declared in `workspace.org`
+([task-icons.md](../planning/task-icons.md)), and it is drawn through
+`ps/material-icons-image` like a category icon, in the same colour.
+
 **Without the font, things degrade rather than break.** The agenda keeps its
 existing icons (the build is a no-op), and the file tree falls back to the
 same-named SVGs in `icons/` (`ps/file-tree-icon-fallback-dir`).
@@ -87,10 +92,3 @@ agenda's date badges use the same two glyphs, set separately in
   nesting works.
 - **Hiding a line that carries an icon** needs its `display` property removed as
   well as `invisible` set, or the image stays on screen (`ps/file-tree--hide-line`).
-
-## Not built yet
-
-- **Semantic icons in place of the agenda's emojis.** The emoji column
-  (`ps-agenda-emoji`, matched by sentence embeddings in
-  `scripts/org_emoji_matcher.py`) is a stopgap, to be replaced by Material
-  Symbols glyphs through this same pipeline.

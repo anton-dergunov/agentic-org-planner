@@ -60,7 +60,7 @@ is removed on exit. Combine with =--emacs=:
 #+begin_src bash
 PYTHONPATH=. pytest
 # a single file:
-PYTHONPATH=. pytest tests/test_emoji_matcher.py
+PYTHONPATH=. pytest tests/test_task_icon_matcher.py
 #+end_src
 
 *Elisp* (modules in =lisp/=, tests in =tests/test-*.el=, using ERT):
@@ -87,8 +87,12 @@ Passing the test suite is necessary but not sufficient — the real check is tha
 - =lisp/ps-*.el= are extracted, self-contained modules (free-slot computation,
   conflicts, the agenda layout, the file tree, Git sync, …), each with ERT tests
   in =tests/test-*.el=.
-- =scripts/= holds Python helpers (e.g. the semantic emoji matcher) and shell
+- =scripts/= holds Python helpers (e.g. the task-icon matcher) and shell
   utilities.
+- =icons/task-matcher/= is the task-icon matcher's model data. It is not edited
+  by hand: the task-concept-retrieval research project exports it
+  (=scripts/export_bundle.py= there). Replacing it makes the agenda re-match
+  every task.
 
 The long-term direction is to keep moving non-trivial logic out of =config.org=
 into tested =lisp/= modules.

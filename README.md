@@ -20,7 +20,8 @@ setup or borrow pieces for your own.
 
 - **A visual agenda** — your day at a glance: a real timeline, deadlines,
   overdue items, high-priority, in-progress and next-up tasks, with category
-  icons and compact status/priority/date pills.
+  icons, a glanceable icon for what each task is about, and compact
+  status/priority/date pills.
 - **A schedule view** — see the day as a timeline or a compact event list, with
   a live now-indicator that refreshes every minute.
 - **Situations** — saved searches named by circumstance ("a spare minute", "on

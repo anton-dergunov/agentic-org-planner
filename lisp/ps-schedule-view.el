@@ -4,11 +4,11 @@
 ;; Renders the org-agenda Schedule (time-grid) section in two styles:
 ;;
 ;;   Timeline — time axis with a tick at each grid interval:
-;;     08:00-08:15 ┆ [cat] [STATE] [PRI] [emoji]  Title…
+;;     08:00-08:15 ┆ [cat] [STATE] [PRI] [icon]  Title…
 ;;     08:00       ┆
-;;     10:00-14:00 ┆ [cat] [STATE] [PRI] [emoji]  Title…
+;;     10:00-14:00 ┆ [cat] [STATE] [PRI] [icon]  Title…
 ;;     ┄┄┄┄┄┄┄┄┄┄┄┄┆┄┄┄┄┄┄  now · 13:47  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-;;     15:00       ┆ [cat] [STATE] [PRI] [emoji]  Title…   ⚠ overlap
+;;     15:00       ┆ [cat] [STATE] [PRI] [icon]  Title…   ⚠ overlap
 ;;
 ;;   Events — same but grid ticks hidden; only timed events shown.
 ;;
@@ -37,7 +37,7 @@
 (declare-function ps/agenda-layout--item-p         "ps-agenda-layout" ())
 (declare-function ps/agenda-layout--title          "ps-agenda-layout" ())
 (declare-function ps/agenda-layout--priority-char  "ps-agenda-layout" ())
-(declare-function ps/agenda-layout--emoji          "ps-agenda-layout" (title))
+(declare-function ps/agenda-layout--task-icon      "ps-agenda-layout" ())
 (declare-function ps/agenda-layout--render-category "ps-agenda-layout" (cols))
 (declare-function ps/agenda-layout--space-to       "ps-agenda-layout" (col))
 (declare-function ps/agenda-layout--space-to-right "ps-agenda-layout" (cols))
@@ -59,7 +59,6 @@
 (defvar ps/agenda-layout-right-margin-cols)
 (defvar ps/agenda-layout-truncate)
 (defvar ps/agenda-layout-schedule-group)
-(defvar ps/agenda-layout-emoji-face)
 
 ;;; Defgroup
 
@@ -299,7 +298,7 @@ to the title text (preserving the theme's scheduled-task colour)."
          (state      (org-get-at-bol 'todo-state))
          (tags       (org-get-at-bol 'tags))
          (pri        (ps/agenda-layout--priority-char))
-         (emoji      (ps/agenda-layout--emoji title))
+         (icon       (ps/agenda-layout--task-icon))
          (tag-str    (ps/agenda-layout--tags-string tags))
          ;; U+FE0E (text variation selector) keeps ⚠ a narrow monochrome glyph
          ;; instead of a wide color emoji, so its width matches the reldate
@@ -326,12 +325,8 @@ to the title text (preserving the theme's scheduled-task colour)."
     (when state (push (ps/agenda-layout--state-text state) parts))
     (push (ps/agenda-layout--space-to (plist-get cols :pri)) parts)
     (when pri (push (ps/agenda-layout--priority-text pri) parts))
-    (push (ps/agenda-layout--space-to (plist-get cols :emoji)) parts)
-    (when emoji
-      (push (if ps/agenda-layout-emoji-face
-                (propertize emoji 'face ps/agenda-layout-emoji-face)
-              emoji)
-            parts))
+    (push (ps/agenda-layout--space-to (plist-get cols :icon)) parts)
+    (when icon (push icon parts))
     (push (ps/agenda-layout--space-to title-col) parts)
     ;; `add-face-text-property' rather than `propertize ... 'face': the latter
     ;; would replace the per-span emphasis faces instead of layering with them.

@@ -19,6 +19,12 @@
 !icons/
 !icons/*.svg
 !icons/material-symbols.codepoints
+# The task-icon matcher bundle, exported by the task-concept-retrieval project.
+!icons/task-matcher/
+!icons/task-matcher/manifest.json
+!icons/task-matcher/names.txt
+!icons/task-matcher/*.npy
+!icons/task-matcher/*.npz
 
 !scripts/
 !scripts/*.py

@@ -73,6 +73,9 @@ One or two sentences: what this is about.
   rebuilt into aligned columns with badges.
 - [`schedule-view.md`](planning/schedule-view.md) — The Schedule section drawn
   as a timeline or a list of events instead of Org's time grid.
+- [`task-icons.md`](planning/task-icons.md) — An icon for what each task is
+  about: the matcher bundle from the research project, why scoring stays in
+  Python for now, and what a Python-free runtime would take.
 - [`situations.md`](planning/situations.md) — Context tags as affordances, and
   the saved searches ("situations") derived from one declaration.
 - [`capture.md`](planning/capture.md) — How captured material reaches the

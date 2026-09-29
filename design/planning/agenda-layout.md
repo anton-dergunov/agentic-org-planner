@@ -4,10 +4,10 @@ How each agenda line is rebuilt into aligned columns with badges, and why.
 
 **Status:** built
 **Code:** `lisp/ps-agenda-layout.el` (the layout pass), `lisp/ps-agenda-fold.el`
-(collapsible sections), `lisp/ps-agenda-emoji.el` (emoji data only),
+(collapsible sections), `lisp/ps-task-icons.el` (task-icon names only),
 `lisp/ps-agenda-icons.el` (category icons); settings blocks
 `** Agenda layout (ps-agenda-layout.el)`, `** Agenda fold (ps-agenda-fold.el)`
-and `** Agenda emoji matcher (ps-agenda-emoji.el)`. User docs:
+and `** Agenda task icons (ps-task-icons.el)`. User docs:
 `docs/Agenda.org` → "Reading a line".
 
 ## Problem
@@ -24,15 +24,17 @@ is drawn.
 ## The line
 
 ```
-[category icon] [STATE] [PRI] [emoji]  Title…  [tags]            [date badge]
+[category icon] [STATE] [PRI] [task icon]  Title…  [tags]            [date badge]
 ```
 
 ## Decisions
 
 **Every field has a reserved slot.** A slot is kept whether or not the task has
 that field, so titles line up across all sections and the list can be scanned
-without re-reading each line's shape. The emoji slot is reserved too, so emojis
-that arrive later do not shift titles. The title gets all the remaining width;
+without re-reading each line's shape. The task-icon slot is reserved too, so
+icons that arrive later do not shift titles. It is the one slot that collapses
+for a whole buffer: where no task icon can be drawn (a text terminal, the Tasks
+view), its column and gap are dropped. The title gets all the remaining width;
 a title that overflows is truncated with `…` and shown in full in a tooltip.
 
 **Widths are measured, and every gap is one space.** The badges render in a
@@ -82,10 +84,11 @@ have `time-of-day` but no marker; section headers carry
 
 **Each module owns one part of the line:**
 
-- The emoji module owns the data: an async matcher (`scripts/org_emoji_matcher.py`),
-  a persistent cache keyed by title, and `ps/agenda-emoji-lookup`. When a
-  batch arrives it calls `ps/agenda-layout-refresh`. The layout owns all
-  drawing.
+- The task-icon module owns the data: an async matcher
+  (`scripts/org_task_icon_matcher.py`), a persistent cache, and
+  `ps/task-icons-name-at-point` ([task-icons.md](task-icons.md)). When a batch
+  arrives it calls `ps/agenda-layout-refresh`. The layout owns all drawing,
+  and draws the name like a category icon.
 - The Schedule section belongs to [schedule-view.md](schedule-view.md) whenever
   `ps/schedule-view-override` is set; the layout then skips that block.
 
@@ -124,8 +127,6 @@ is always on screen.
 
 ## Not built yet
 
-- Emojis are a stopgap. The plan is to replace them with Material Symbols
-  glyphs drawn through the same pipeline as the category icons.
 - The title budget is counted in characters. A proportional font in the agenda
   would need pixel measurement throughout; see
   [typography.md](../interface/typography.md).

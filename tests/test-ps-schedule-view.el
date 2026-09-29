@@ -4,13 +4,12 @@
 
 ;; Stub out ps-agenda-layout so we can load ps-schedule-view in isolation.
 (unless (featurep 'ps-agenda-layout)
-  (defun ps/agenda-layout--columns () '(:cat 1 :state 5 :pri 12 :emoji 17 :title 20))
+  (defun ps/agenda-layout--columns () '(:cat 1 :state 5 :pri 12 :icon 17 :title 20))
   (defun ps/agenda-layout--window-cols () 80)
   (defvar ps/agenda-layout-left-margin-cols 1)
   (defvar ps/agenda-layout-right-margin-cols 2)
   (defvar ps/agenda-layout-truncate t)
   (defvar ps/agenda-layout-schedule-group "Schedule")
-  (defvar ps/agenda-layout-emoji-face nil)
   (provide 'ps-agenda-layout))
 
 (require 'ps-schedule-view)

@@ -134,3 +134,12 @@ queue (`ps-info-triage.el`).
 The design notes, until then untracked scratch files beside the code, were
 reorganised into `design/` by topic, with this history and the architecture
 overview ([README.md](README.md)).
+
+## September 2026: task icons instead of emojis
+
+The agenda's semantic emoji, matched by sentence embeddings against emoji names,
+was replaced by a Material Symbols icon per task. The emojis clashed with the
+monochrome icons everywhere else, and the matches were often only loosely
+related. The matching now comes from the separate task-concept-retrieval
+research project as an exported bundle, run by a small Python script that no
+longer needs torch ([task-icons.md](planning/task-icons.md)).

@@ -1,6 +1,6 @@
 numpy
 geopy
 timezonefinder
-emoji
-sentence-transformers
+onnxruntime
+tokenizers
 pytest

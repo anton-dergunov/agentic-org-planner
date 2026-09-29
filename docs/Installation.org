@@ -195,9 +195,13 @@ pip install -r ~/.emacs.d/requirements.txt
 #+end_src
 
 The first time the agenda opens, the language model the matcher uses (about
-250 MB) is downloaded once into =~/.cache/ps-task-icons/=; icons appear when it
-is done. Without Python or these packages, the config still loads — tasks
-simply show no icon, and a message says why.
+250 MB, the public =multilingual-e5-small= model) is downloaded once from
+Hugging Face into =~/.cache/ps-task-icons/=; no account is needed. Icons appear
+when it is done.
+
+Without Python, the packages or the download, the config still loads: tasks
+simply show no icon, and one message says why — for example which packages to
+install. The matcher tries again after ten minutes, quietly.
 
 * Under the hood / Customize
 - The list of vaults is =vaults.eld= in the config directory (see [[file:Vaults.org][Vaults]]).

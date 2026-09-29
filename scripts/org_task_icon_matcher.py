@@ -19,16 +19,26 @@ below); this script only runs it.  The ONNX text encoder named in the manifest
 is downloaded once into ~/.cache/ps-task-icons/ and verified by sha256.
 
 Requirements: pip install onnxruntime tokenizers numpy
+
+On failure it exits non-zero, and the last line on stderr says why in plain
+words (Emacs shows that line).
 """
 
 import hashlib
+import importlib.util
 import json
 import re
 import sys
+import traceback
 import urllib.request
 from pathlib import Path
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:  # reported by main() with the install command
+    np = None
+
+REQUIRED = ("numpy", "onnxruntime", "tokenizers")
 
 DEFAULT_BUNDLE = Path(__file__).resolve().parent.parent / "icons" / "task-matcher"
 CACHE_DIR = Path.home() / ".cache" / "ps-task-icons"
@@ -122,7 +132,12 @@ def fetch(spec):
     print(f"[task-icons] downloading {spec['url'].rsplit('/', 1)[-1]} ({size:.0f} MB)",
           file=sys.stderr, flush=True)
     tmp = path.with_suffix(path.suffix + ".part")
-    urllib.request.urlretrieve(spec["url"], tmp)
+    try:
+        urllib.request.urlretrieve(spec["url"], tmp)
+    except Exception as e:
+        tmp.unlink(missing_ok=True)
+        raise RuntimeError(f"could not download the model from {spec['url']} ({e}); "
+                           "will retry later") from e
     h = hashlib.sha256()
     with open(tmp, "rb") as f:
         for chunk in iter(lambda: f.read(1 << 20), b""):
@@ -231,11 +246,19 @@ class Matcher:
 
 
 def main():
+    missing = [m for m in REQUIRED if importlib.util.find_spec(m) is None]
+    if missing:
+        sys.exit(f"missing Python packages: {', '.join(missing)} "
+                 f"(pip install {' '.join(REQUIRED)})")
     bundle = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_BUNDLE
-    tasks = json.loads(sys.stdin.read() or "[]")
-    if not isinstance(tasks, list):
-        raise SystemExit("input must be a JSON list of tasks")
-    print(json.dumps(Matcher(bundle).match(tasks), ensure_ascii=False))
+    try:
+        tasks = json.loads(sys.stdin.read() or "[]")
+        if not isinstance(tasks, list):
+            raise ValueError("input must be a JSON list of tasks")
+        print(json.dumps(Matcher(bundle).match(tasks), ensure_ascii=False))
+    except Exception as e:
+        traceback.print_exc()
+        sys.exit(str(e) or type(e).__name__)
 
 
 if __name__ == "__main__":

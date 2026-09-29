@@ -82,6 +82,9 @@
 Within `ps/task-icons--retry-after' seconds of it the matcher is not restarted,
 so a missing Python dependency does not respawn it on every agenda render.")
 
+(defvar ps/task-icons--last-failure nil
+  "The reason last reported for a failed run, so it is reported only once.")
+
 (defconst ps/task-icons--retry-after 600
   "Seconds to wait after a failed matcher run before trying again.")
 
@@ -246,55 +249,84 @@ built for."
 ;;; Async matcher process
 
 (defun ps/task-icons--python ()
-  "The Python interpreter to run the matcher with."
-  (or (executable-find "python3") (executable-find "python") "python3"))
+  "The Python 3 interpreter to run the matcher with, or nil if there is none."
+  (or (executable-find "python3") (executable-find "python")))
+
+(defun ps/task-icons--fail (reason)
+  "Record a failed run because of REASON, and report it once per reason.
+Tasks keep showing no icon; the matcher is retried after
+`ps/task-icons--retry-after' seconds, quietly unless the reason changes."
+  (setq ps/task-icons--failed-at (float-time))
+  (unless (equal reason ps/task-icons--last-failure)
+    (setq ps/task-icons--last-failure reason)
+    (message "[task-icons] No task icons: %s" reason)))
 
 (defun ps/task-icons--run-matcher (tasks callback)
   "Send TASKS to the matcher asynchronously; call CALLBACK with its answer.
 CALLBACK receives a hash table mapping each task key to an icon name or nil.
-Progress lines the runner prints (the one-time encoder download) are echoed."
-  (let* ((out (generate-new-buffer " *task-icons-output*"))
-         (last-error "")
-         (stderr (make-pipe-process
-                  :name "task-icons-stderr" :noquery t
-                  :filter (lambda (_p text)
-                            (dolist (line (split-string text "\n" t))
-                              (setq last-error line)
-                              (when (string-prefix-p "[task-icons]" line)
-                                (message "%s" line)))))))
-    (setq ps/task-icons--process
-          (make-process
-           :name "task-icons-matcher"
-           :buffer out
-           :stderr stderr
-           :command (list (ps/task-icons--python) ps/task-icons-matcher-path
-                          ps/task-icons-bundle-dir)
-           :noquery t
-           :connection-type 'pipe
-           :sentinel
-           (lambda (p _event)
-             (unless (process-live-p p)
-               (setq ps/task-icons--process nil)
-               (let ((answer (and (zerop (process-exit-status p))
-                                  (buffer-live-p out)
-                                  (with-current-buffer out
-                                    (ignore-errors
-                                      (json-parse-string (buffer-string)
-                                                         :object-type 'hash-table
-                                                         :null-object nil))))))
-                 (when (buffer-live-p out) (kill-buffer out))
-                 (delete-process stderr)
-                 (if (hash-table-p answer)
-                     (funcall callback answer)
-                   (setq ps/task-icons--failed-at (float-time))
-                   (message "[task-icons] matcher failed: %s" last-error)))))))
+Progress lines the runner prints (the one-time encoder download) are echoed;
+when it fails, its last stderr line says why.  Never signals: a missing
+interpreter or a failed start is reported through `ps/task-icons--fail'."
+  (if-let ((python (ps/task-icons--python)))
+      (let* ((out (generate-new-buffer " *task-icons-output*"))
+             (last-error "the matcher exited without an answer")
+             (stderr (make-pipe-process
+                      :name "task-icons-stderr" :noquery t
+                      :filter (lambda (_p text)
+                                (dolist (line (split-string text "\n" t))
+                                  (setq last-error line)
+                                  (when (string-prefix-p "[task-icons]" line)
+                                    (message "%s" line)))))))
+        (condition-case err
+            (ps/task-icons--start python tasks out stderr
+                                  (lambda (answer)
+                                    (if (hash-table-p answer)
+                                        (progn (setq ps/task-icons--last-failure nil)
+                                               (funcall callback answer))
+                                      (ps/task-icons--fail last-error))))
+          (error
+           (when (buffer-live-p out) (kill-buffer out))
+           (delete-process stderr)
+           (setq ps/task-icons--process nil)
+           (ps/task-icons--fail (error-message-string err)))))
+    (ps/task-icons--fail
+     "no Python 3 found (see Installation, \"Install the task-icon matcher\")")))
+
+(defun ps/task-icons--start (python tasks out stderr done)
+  "Start the matcher with PYTHON on TASKS, answering into buffer OUT.
+STDERR is the pipe for its stderr.  DONE is called with the parsed answer, or
+nil when the run failed."
+  (setq ps/task-icons--process
+        (make-process
+         :name "task-icons-matcher"
+         :buffer out
+         :stderr stderr
+         :command (list python ps/task-icons-matcher-path ps/task-icons-bundle-dir)
+         :noquery t
+         :connection-type 'pipe
+         :sentinel
+         (lambda (p _event)
+           (unless (process-live-p p)
+             (setq ps/task-icons--process nil)
+             (let ((answer (and (zerop (process-exit-status p))
+                                (buffer-live-p out)
+                                (with-current-buffer out
+                                  (ignore-errors
+                                    (json-parse-string (buffer-string)
+                                                       :object-type 'hash-table
+                                                       :null-object nil))))))
+               (when (buffer-live-p out) (kill-buffer out))
+               ;; Let the stderr filter see the last lines before reading them.
+               (accept-process-output stderr 0.1)
+               (delete-process stderr)
+               (funcall done answer))))))
     (process-send-string
      ps/task-icons--process
      (json-serialize
       (vconcat (mapcar (lambda (task)
                          (cons (cons 'key (ps/task-icons--key task)) task))
                        tasks))))
-    (process-send-eof ps/task-icons--process)))
+    (process-send-eof ps/task-icons--process))
 
 ;;; Agenda integration
 

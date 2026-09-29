@@ -211,4 +211,36 @@ planning line and drawers."
     (let ((ps/task-icons-enabled nil))
       (should (null (ps/task-icons-lookup '((title . "Known"))))))))
 
+;;; -------------------------------------------------------
+;;; failure handling
+;;; -------------------------------------------------------
+
+(ert-deftest ps/task-icons--no-python-fails-quietly ()
+  "Without Python the run does not signal, backs off, and says why once."
+  (let ((ps/task-icons--failed-at nil)
+        (ps/task-icons--last-failure nil)
+        (messages '()))
+    (cl-letf (((symbol-function 'ps/task-icons--python) #'ignore)
+              ((symbol-function 'message)
+               (lambda (fmt &rest args) (push (apply #'format fmt args) messages))))
+      (ps/task-icons--run-matcher '(((title . "A"))) #'ignore)
+      (ps/task-icons--run-matcher '(((title . "A"))) #'ignore))
+    (should ps/task-icons--failed-at)
+    (should-not (ps/task-icons--may-run-p))
+    (should (= (length messages) 1))
+    (should (string-match-p "no Python 3 found" (car messages)))))
+
+(ert-deftest ps/task-icons--failed-start-cleans-up ()
+  "A matcher that cannot start leaves no process behind and is reported."
+  (let ((ps/task-icons--failed-at nil)
+        (ps/task-icons--last-failure nil)
+        (ps/task-icons--process nil)
+        (before (length (process-list))))
+    (cl-letf (((symbol-function 'ps/task-icons--python) (lambda () "/nonexistent/python3"))
+              ((symbol-function 'message) #'ignore))
+      (ps/task-icons--run-matcher '(((title . "A"))) #'ignore))
+    (should ps/task-icons--failed-at)
+    (should (null ps/task-icons--process))
+    (should (= (length (process-list)) before))))
+
 ;;; test-ps-task-icons.el ends here

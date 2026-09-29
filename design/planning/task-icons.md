@@ -63,9 +63,13 @@ about 820 ms interpreted. The runner does it in milliseconds.
 **One matcher run per batch of uncached tasks; the cache does the rest.** After
 an agenda render, uncached tasks go to one runner process, which takes about a
 second including model load. The layout is refreshed when its answer arrives.
-A warm render never starts Python. "No icon" is cached as an answer too. After
-a failed run (for example, a missing package) the runner is not restarted for
-ten minutes, so it does not respawn on every render.
+A warm render never starts Python. "No icon" is cached as an answer too.
+
+**Failure is quiet and says why once.** No Python, missing packages or a failed
+model download never signal. The runner's last stderr line is written to be
+shown as is (for example, the `pip install` to run), and it is reported once
+per distinct reason. The runner is then not restarted for ten minutes, so it
+does not respawn on every render.
 
 **The icon column collapses where no icon can show:** on a text terminal,
 without the font, and in the Tasks view, which turns task icons off.

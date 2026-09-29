@@ -146,6 +146,27 @@ planning line and drawers."
   (should (equal (ps/task-icons--key '((title . "A") (parents . ["P"])))
                  "{\"title\":\"A\",\"parents\":[\"P\"]}")))
 
+(defconst ps/task-icons-test--non-ascii
+  '((title . "Hepatitis A: second dose — window lapsed") (parents . ["Здоровье"]))
+  "A task whose fields are not plain ASCII.")
+
+(ert-deftest ps/task-icons--key-non-ascii-is-text ()
+  "A non-ASCII key is a text string that serializes again for the matcher."
+  (let ((key (ps/task-icons--key ps/task-icons-test--non-ascii)))
+    (should (multibyte-string-p key))
+    (should (string-match-p "—" key))
+    (should (json-serialize
+             (vector (cons (cons 'key key) ps/task-icons-test--non-ascii))))))
+
+(ert-deftest ps/task-icons--cache-roundtrip-non-ascii ()
+  "A non-ASCII key is found again after the cache is saved and reloaded."
+  (ps/task-icons-test--with-bundle (ps/task-icons-test--manifest "t")
+    (ps/task-icons--cache-put (ps/task-icons--key ps/task-icons-test--non-ascii) "vaccines")
+    (ps/task-icons--cache-save)
+    (setq ps/task-icons--cache nil)
+    (let ((ps/task-icons-enabled t))
+      (should (equal (ps/task-icons-lookup ps/task-icons-test--non-ascii) "vaccines")))))
+
 (ert-deftest ps/task-icons--collect-tasks-dedupes ()
   "Repeated tasks (e.g. a task shown in two sections) are sent once."
   (with-temp-buffer

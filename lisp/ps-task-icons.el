@@ -171,8 +171,13 @@ INPUTS defaults to the manifest's."
       (ps/task-icons--task-at-marker marker (or inputs (ps/task-icons--inputs))))))
 
 (defun ps/task-icons--key (task)
-  "The cache key for TASK: its fields as JSON."
-  (json-serialize task))
+  "The cache key for TASK: its fields as JSON, as a text (multibyte) string.
+`json-serialize' returns UTF-8 *bytes* (a unibyte string).  Used raw, a key for
+a title with any non-ASCII character (\"—\", Cyrillic) could not be serialized
+again for the matcher, and would never equal the same key read back from the
+cache file."
+  (let ((json (json-serialize task)))
+    (if (multibyte-string-p json) json (decode-coding-string json 'utf-8 t))))
 
 (defun ps/task-icons--collect-tasks ()
   "The distinct tasks on the lines of the current buffer, in order."
@@ -221,8 +226,9 @@ built for."
       (let ((data (make-hash-table :test 'equal)))
         (puthash "tag" ps/task-icons--cache-loaded-tag data)
         (puthash "map" ps/task-icons--cache data)
-        (with-temp-file ps/task-icons-cache-file
-          (insert (json-serialize data)))))))
+        (let ((coding-system-for-write 'utf-8-unix))
+          (with-temp-file ps/task-icons-cache-file
+            (json-insert data)))))))
 
 (defun ps/task-icons--missing (tasks)
   "The members of TASKS with no cached answer (a cached \"no icon\" counts)."
@@ -285,9 +291,14 @@ interpreter or a failed start is reported through `ps/task-icons--fail'."
                                                (funcall callback answer))
                                       (ps/task-icons--fail last-error))))
           (error
+           ;; Stop a matcher that did start, or its sentinel would report a
+           ;; second, misleading failure once its buffer is gone.
+           (when (process-live-p ps/task-icons--process)
+             (set-process-sentinel ps/task-icons--process #'ignore)
+             (delete-process ps/task-icons--process))
+           (setq ps/task-icons--process nil)
            (when (buffer-live-p out) (kill-buffer out))
            (delete-process stderr)
-           (setq ps/task-icons--process nil)
            (ps/task-icons--fail (error-message-string err)))))
     (ps/task-icons--fail
      "no Python 3 found (see Installation, \"Install the task-icon matcher\")")))
@@ -295,38 +306,38 @@ interpreter or a failed start is reported through `ps/task-icons--fail'."
 (defun ps/task-icons--start (python tasks out stderr done)
   "Start the matcher with PYTHON on TASKS, answering into buffer OUT.
 STDERR is the pipe for its stderr.  DONE is called with the parsed answer, or
-nil when the run failed."
-  (setq ps/task-icons--process
-        (make-process
-         :name "task-icons-matcher"
-         :buffer out
-         :stderr stderr
-         :command (list python ps/task-icons-matcher-path ps/task-icons-bundle-dir)
-         :noquery t
-         :connection-type 'pipe
-         :sentinel
-         (lambda (p _event)
-           (unless (process-live-p p)
-             (setq ps/task-icons--process nil)
-             (let ((answer (and (zerop (process-exit-status p))
-                                (buffer-live-p out)
-                                (with-current-buffer out
-                                  (ignore-errors
-                                    (json-parse-string (buffer-string)
-                                                       :object-type 'hash-table
-                                                       :null-object nil))))))
-               (when (buffer-live-p out) (kill-buffer out))
-               ;; Let the stderr filter see the last lines before reading them.
-               (accept-process-output stderr 0.1)
-               (delete-process stderr)
-               (funcall done answer))))))
-    (process-send-string
-     ps/task-icons--process
-     (json-serialize
-      (vconcat (mapcar (lambda (task)
-                         (cons (cons 'key (ps/task-icons--key task)) task))
-                       tasks))))
-    (process-send-eof ps/task-icons--process))
+nil when the run failed.  The request is built before the process starts, so
+a task that cannot be serialized fails without leaving a process behind."
+  (let ((request (json-serialize
+                  (vconcat (mapcar (lambda (task)
+                                     (cons (cons 'key (ps/task-icons--key task)) task))
+                                   tasks)))))
+    (setq ps/task-icons--process
+          (make-process
+           :name "task-icons-matcher"
+           :buffer out
+           :stderr stderr
+           :command (list python ps/task-icons-matcher-path ps/task-icons-bundle-dir)
+           :noquery t
+           :connection-type 'pipe
+           :sentinel
+           (lambda (p _event)
+             (unless (process-live-p p)
+               (setq ps/task-icons--process nil)
+               (let ((answer (and (zerop (process-exit-status p))
+                                  (buffer-live-p out)
+                                  (with-current-buffer out
+                                    (ignore-errors
+                                      (json-parse-string (buffer-string)
+                                                         :object-type 'hash-table
+                                                         :null-object nil))))))
+                 (when (buffer-live-p out) (kill-buffer out))
+                 ;; Let the stderr filter see the last lines before reading them.
+                 (accept-process-output stderr 0.1)
+                 (delete-process stderr)
+                 (funcall done answer))))))
+    (process-send-string ps/task-icons--process request)
+    (process-send-eof ps/task-icons--process)))
 
 ;;; Agenda integration
 

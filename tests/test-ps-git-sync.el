@@ -697,6 +697,146 @@ This is the toggle the dev script relies on to disable sync during testing."
       (should-not ps/git-sync--running))))
 
 ;;; -------------------------------------------------------
+;;; the sync command: commit, then pull, then push
+;;; -------------------------------------------------------
+
+(defun ps/git-sync-test--git (dir &rest args)
+  "Run git with ARGS in DIR and return its trimmed output.
+Signals an error when git exits non-zero, so a broken fixture fails loudly."
+  (with-temp-buffer
+    (let ((default-directory (file-name-as-directory dir)))
+      (unless (eq 0 (apply #'call-process "git" nil t nil args))
+        (error "git %s failed: %s" (string-join args " ") (buffer-string))))
+    (string-trim (buffer-string))))
+
+(defun ps/git-sync-test--write (dir name text)
+  "Write TEXT to the file NAME in DIR."
+  (let ((coding-system-for-write 'utf-8-unix))
+    (write-region text nil (expand-file-name name dir) nil 'silent)))
+
+(defun ps/git-sync-test--read (dir name)
+  "Return the contents of the file NAME in DIR."
+  (with-temp-buffer
+    (insert-file-contents (expand-file-name name dir))
+    (buffer-string)))
+
+(defun ps/git-sync-test--publish (dir name text)
+  "Write TEXT to NAME in DIR, then commit and push it, as another machine would."
+  (ps/git-sync-test--write dir name text)
+  (ps/git-sync-test--git dir "add" "-A")
+  (ps/git-sync-test--git dir "commit" "-m" "From the other machine")
+  (ps/git-sync-test--git dir "push"))
+
+(defun ps/git-sync-test--sync (dir)
+  "Run one sync in DIR the way `ps/git-sync--run' does.
+Returns (EXIT-STATUS . OUTPUT)."
+  (with-temp-buffer
+    (let ((default-directory (file-name-as-directory dir)))
+      (cons (call-process "sh" nil t nil "-c" (ps/git-sync--command "Auto backup"))
+            (buffer-string)))))
+
+(defmacro ps/git-sync-test--with-two-machines (remote here there &rest body)
+  "Run BODY with REMOTE, HERE and THERE bound to three linked repositories.
+REMOTE is a bare repository; HERE and THERE are clones of it standing for
+two machines, both on `main' with one commit holding `notes.org'.  Git's
+user and system configuration are kept out, so the command under test is
+run with nothing but its own flags to decide how a pull reconciles."
+  (declare (indent 3))
+  (let ((root (make-symbol "root")))
+    `(progn
+       (skip-unless (executable-find "git"))
+       (let* ((,root (make-temp-file "ps-git-sync-machines-" t))
+              (,remote (expand-file-name "remote.git" ,root))
+              (,here (expand-file-name "here" ,root))
+              (,there (expand-file-name "there" ,root))
+              (process-environment
+               (append '("GIT_CONFIG_GLOBAL=/dev/null"
+                         "GIT_CONFIG_NOSYSTEM=1"
+                         "GIT_AUTHOR_NAME=Test" "GIT_AUTHOR_EMAIL=test@example.com"
+                         "GIT_COMMITTER_NAME=Test"
+                         "GIT_COMMITTER_EMAIL=test@example.com")
+                       process-environment)))
+         (unwind-protect
+             (progn
+               (ps/git-sync-test--git ,root "init" "--bare" "--initial-branch=main"
+                                      ,remote)
+               (ps/git-sync-test--git ,root "clone" ,remote ,there)
+               (ps/git-sync-test--git ,there "symbolic-ref" "HEAD" "refs/heads/main")
+               (ps/git-sync-test--write ,there "notes.org" "one\n")
+               (ps/git-sync-test--git ,there "add" "-A")
+               (ps/git-sync-test--git ,there "commit" "-m" "Seed")
+               (ps/git-sync-test--git ,there "push" "-u" "origin" "main")
+               (ps/git-sync-test--git ,root "clone" ,remote ,here)
+               ,@body)
+           (delete-directory ,root t))))))
+
+(ert-deftest ps/git-sync--command-accepts-edits-a-cloud-syncer-delivered-first ()
+  "Files that arrive from a cloud syncer before their commits do not block sync.
+The other machine pushed an edit, and the cloud folder has already written
+the same edit into this working tree.  Pulling first refuses to overwrite
+those files, forever; committing first makes it an edit both sides made."
+  (ps/git-sync-test--with-two-machines remote here there
+    (ps/git-sync-test--publish there "notes.org" "one\ntwo\n")
+    (ps/git-sync-test--write here "notes.org" "one\ntwo\n")
+    (let ((result (ps/git-sync-test--sync here)))
+      (should (equal (car result) 0)))
+    (should (equal (ps/git-sync-test--git here "status" "--porcelain") ""))
+    (should (equal (ps/git-sync-test--read here "notes.org") "one\ntwo\n"))
+    (should (equal (ps/git-sync-test--git here "rev-parse" "HEAD")
+                   (ps/git-sync-test--git remote "rev-parse" "main")))))
+
+(ert-deftest ps/git-sync--command-merges-edits-made-on-both-machines ()
+  "A local edit and a remote one to different files both survive the sync.
+This is the diverged history that committing first makes routine, and that
+a bare `git pull' refuses to reconcile when `pull.rebase' is unset."
+  (ps/git-sync-test--with-two-machines remote here there
+    (ps/git-sync-test--publish there "theirs.org" "from there\n")
+    (ps/git-sync-test--write here "ours.org" "from here\n")
+    (let ((result (ps/git-sync-test--sync here)))
+      (should (equal (car result) 0)))
+    (should (equal (ps/git-sync-test--read here "theirs.org") "from there\n"))
+    (should (equal (ps/git-sync-test--read here "ours.org") "from here\n"))
+    (should (equal (ps/git-sync-test--git here "rev-parse" "HEAD")
+                   (ps/git-sync-test--git remote "rev-parse" "main")))))
+
+(ert-deftest ps/git-sync--command-never-commits-an-unresolved-conflict ()
+  "A sync run over an unresolved merge stops before staging anything.
+Sync resumes whenever the pause is cleared, resolved or not, and `git add -A'
+would otherwise commit the conflict markers as the resolution and push them."
+  (ps/git-sync-test--with-two-machines remote here there
+    (ps/git-sync-test--publish there "notes.org" "theirs\n")
+    (ps/git-sync-test--write here "notes.org" "ours\n")
+    (let ((first (ps/git-sync-test--sync here)))
+      (should-not (equal (car first) 0))
+      (should (eq (ps/git-sync--classify (cdr first)) 'conflict)))
+    (let ((head (ps/git-sync-test--git here "rev-parse" "HEAD"))
+          (pushed (ps/git-sync-test--git remote "rev-parse" "main"))
+          (second (ps/git-sync-test--sync here)))
+      (should-not (equal (car second) 0))
+      (should (eq (ps/git-sync--classify (cdr second)) 'conflict))
+      (should (string-match-p "notes\\.org" (cdr second)))
+      (should (equal (ps/git-sync-test--git here "rev-parse" "HEAD") head))
+      (should (equal (ps/git-sync-test--git remote "rev-parse" "main") pushed))
+      (should (ps/git-sync-test--git here "rev-parse" "--verify" "MERGE_HEAD")))))
+
+(ert-deftest ps/git-sync--command-concludes-a-resolved-merge ()
+  "Once the conflict is resolved, the next sync finishes the merge and pushes.
+Resolving in favour of this machine leaves nothing staged against HEAD, so
+the commit must be made for the merge's sake and not only for a diff."
+  (ps/git-sync-test--with-two-machines remote here there
+    (ps/git-sync-test--publish there "notes.org" "theirs\n")
+    (ps/git-sync-test--write here "notes.org" "ours\n")
+    (should-not (equal (car (ps/git-sync-test--sync here)) 0))
+    (ps/git-sync-test--write here "notes.org" "ours\n")
+    (ps/git-sync-test--git here "add" "notes.org")
+    (let ((result (ps/git-sync-test--sync here)))
+      (should (equal (car result) 0)))
+    (should-error (ps/git-sync-test--git here "rev-parse" "--verify" "MERGE_HEAD"))
+    (should (equal (ps/git-sync-test--read here "notes.org") "ours\n"))
+    (should (equal (ps/git-sync-test--git here "rev-parse" "HEAD")
+                   (ps/git-sync-test--git remote "rev-parse" "main")))))
+
+;;; -------------------------------------------------------
 ;;; repo detection
 ;;; -------------------------------------------------------
 

@@ -58,10 +58,27 @@ the window before the notification arrives
 ([claude-code-panel.md](../ai/claude-code-panel.md)).
 
 **Git sync commits what is on disk**, every `ps/git-sync-interval` seconds:
-`git pull && git add -A && commit if anything is staged && git push`, in one
-asynchronous shell process with a timeout and a watchdog for a hung or vanished
-run. It saves first through the same function, so it never commits over a newer
-file either. After a pull that brought something in, it refreshes the file tree.
+`git add -A && commit if anything is staged && git pull && git push`
+(`ps/git-sync--command`), in one asynchronous shell process with a timeout and a
+watchdog for a hung or vanished run. It saves first through the same function,
+so it never commits over a newer file either. After a pull that brought
+something in, it refreshes the file tree.
+
+**The commit comes before the pull.** With the repository kept outside the cloud
+folder, another machine's edits reach this one twice: as files from the cloud
+syncer and as commits from the remote. The files usually arrive first, so the
+working tree is dirty with exactly what the remote is about to deliver. A pull
+refuses to overwrite a dirty tree; a commit turns the same edits into a change
+both sides made, which merges cleanly. Two things follow from committing first:
+
+- Histories diverge routinely, so the pull is always a merge
+  (`--no-rebase --no-edit`) instead of whatever the user's git configuration
+  says, where an unset `pull.rebase` makes git refuse to reconcile at all.
+- A sync that finds unmerged paths stops before staging anything and reports a
+  conflict. Sync can resume with a conflict still unresolved (the pause does not
+  survive a restart), and `git add -A` would commit the conflict markers as the
+  resolution and push them. Once the paths are resolved, the commit concludes
+  the merge even when the resolution left nothing staged.
 A vault syncs only when it is itself a repository
 ([vaults.md](vaults.md)); `PS_GIT_SYNC_DISABLE` turns it off for a session,
 which the development launcher sets so a dev run never commits this repository.
@@ -134,6 +151,12 @@ only blank lines changed before saving
 - **Prompting on a diverged buffer** during automatic saves (above).
 - **Polling for file changes** instead of notifications (above).
 - **Letting the cloud folder sync `.git`**, even carefully (above).
+- **Pulling before committing.** It keeps history linear while one machine
+  writes, but stops for good as soon as a cloud syncer delivers another
+  machine's files ahead of its commits (above).
+- **Rebasing the pull.** It would drop the duplicate commit that merging keeps,
+  but a stopped rebase leaves a detached HEAD for a timer to commit onto, and
+  swaps which side is "ours" in the conflict the user then has to resolve.
 
 ## Not built yet
 

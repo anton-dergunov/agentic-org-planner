@@ -2,8 +2,9 @@
 
 ;;; Commentary:
 
-;; Pull/commit/push the Org directory on a timer, with a status indicator in
-;; the file-tree mode line (see `ps/file-tree--modeline').
+;; Commit/pull/push the Org directory on a timer, with a status indicator in
+;; the file-tree mode line (see `ps/file-tree--modeline').  The order matters;
+;; see `ps/git-sync--command'.
 ;;
 ;; Reporting a *failure* is the delicate part, because the sync retries every
 ;; `ps/git-sync-interval' seconds and a remote outage lasts minutes.  Three
@@ -620,8 +621,46 @@ without the sentinel running, or kill it when it has hung past
 
 ;;; Main sync
 
+(defun ps/git-sync--command (commit-message)
+  "Return the shell command of one sync, committing as COMMIT-MESSAGE.
+The order is commit, pull, push, and the commit must stay first.  A vault
+kept in a cloud folder with its repository outside it (see
+`docs/Dropbox-and-git.org') receives another machine's edits twice: as
+plain files from the cloud syncer, and as commits from the remote.  The
+files usually win the race, so the working tree is dirty with exactly what
+the remote is about to deliver, and a pull run first refuses to overwrite
+it -- on every tick, until someone resets the branch by hand.  Committed
+first, the same edits are simply made on both sides, and merge cleanly.
+
+Two consequences of committing first are handled here:
+
+- Histories now diverge routinely, so the pull names its strategy instead
+  of leaving it to the user's git configuration, where an unset
+  `pull.rebase' makes git refuse.  `--no-edit' keeps the merge from opening
+  an editor that nobody is there to close.
+- `git add -A' would stage a file still full of conflict markers and commit
+  it as the resolution.  A sync that finds unmerged paths therefore stops
+  before staging anything, and reports it as the conflict it is.  Once the
+  paths are resolved, the commit concludes the merge even when the
+  resolution left nothing staged."
+  (format
+   (concat
+    "if [ -n \"$(git ls-files --unmerged)\" ]; then "
+    "echo 'CONFLICT: unresolved merge conflict, nothing committed:'; "
+    "git diff --name-only --diff-filter=U; "
+    "exit 1; "
+    "fi && "
+    "git add -A && "
+    "if ! git diff --cached --quiet || "
+    "git rev-parse -q --verify MERGE_HEAD >/dev/null; then "
+    "git commit -m %S; "
+    "fi && "
+    "git pull --no-rebase --no-edit && "
+    "git push")
+   commit-message))
+
 (defun ps/git-sync--run ()
-  "Pull, commit any changes, and push in `ps/git-sync--directory' asynchronously."
+  "Commit any changes, pull, and push in `ps/git-sync--directory' asynchronously."
   (ps/git-sync--reap-stale)
   (when (and
          (not ps/git-sync--running)
@@ -647,16 +686,7 @@ without the sentinel running, or kill it when it has hung past
                     timestamp
                     host))
 
-           (cmd
-            (format
-             (concat
-              "git pull && "
-              "git add -A && "
-              "if ! git diff --cached --quiet; then "
-              "git commit -m %S; "
-              "fi && "
-              "git push")
-             commit-message))
+           (cmd (ps/git-sync--command commit-message))
 
            (buffer
             (generate-new-buffer

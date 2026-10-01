@@ -32,7 +32,10 @@ Automatic git sync arrived on 2026-05-20: pull, commit and push on a timer. It
 then grew self-healing, per-failure reporting, and in August coexistence with
 Dropbox, once a cloud syncer replicating `.git` had corrupted a repository with
 "conflicted copy" branches. The rule that only one syncer may own `.git` comes
-from that incident ([data-safety.md](foundations/data-safety.md)).
+from that incident ([data-safety.md](foundations/data-safety.md)). In October
+the order became commit, pull, push: with `.git` moved out of the cloud folder,
+a second machine's files arrived through Dropbox before its commits did, and a
+pull run first refused to overwrite them.
 
 ## June 2026: Neotree to treemacs
 

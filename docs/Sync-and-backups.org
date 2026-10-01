@@ -8,9 +8,12 @@ Your Org files are valuable — this config works to keep them saved, synced
 across machines, and recoverable.
 
 * Automatic Git sync
-If your vault is a Git repository, this config syncs it in the background: it
-commits your changes and pushes/pulls on a timer, so your tasks stay in step
-across devices without you running any Git commands.
+If your vault is a Git repository, this config syncs it in the background: on a
+timer it commits your changes, pulls what other devices pushed, and pushes, so
+your tasks stay in step across devices without you running any Git commands.
+Your changes are committed before anything is pulled, so edits from another
+machine that a cloud folder has already delivered as files are merged, not
+refused.
 
 Syncing is *detected, not configured*. To turn it on for a vault, make that
 folder a repository yourself:

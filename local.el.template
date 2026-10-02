@@ -5,3 +5,7 @@
 ;; remembered in vaults.eld. Setting my-org-base-directory here seeds the very
 ;; first vault, and is ignored once the registry exists.
 (setq my-org-base-directory "<please provide the path here>")
+
+;; Only if you use the capture inbox: where the agent-context-pipeline project
+;; is checked out on this machine.
+;; (setq ps/info-triage-sync-script (expand-file-name "~/path/to/agent-context-pipeline/sync.sh"))

@@ -468,12 +468,14 @@ machine without that project never sees them.
 =ps/info-triage-directory= must name the route's own subdirectory of
 =~/info-triage-inbox/= that the sync script pulls into — =info/= is the
 default route, the only one triaged by hand.
+=ps/info-triage-sync-script=, the path to that project's =sync.sh=, is set in
+=local.el= and not here, because the checkout lives somewhere different on each
+machine.
 =ps/info-triage-open-beside= is the window rule: with it on, the queue keeps
 its window for good and items open in the pane beside it. Turn it off to work
 one window at a time, with =‹= to get back to the list.
 #+begin_src emacs-lisp
   (setq ps/info-triage-directory        (expand-file-name "~/info-triage-inbox/info/")
-        ps/info-triage-sync-script      (expand-file-name "~/projects/tools/agent-context-pipeline/sync.sh")
         ps/info-triage-external-command "code"
         ps/info-triage-open-beside      t)
 #+end_src

@@ -1,9 +1,10 @@
 ;;; ps-info-triage.el --- Work the info-triage inbox from Emacs -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; The daily loop for the separate `info-triage' project (checked out at
-;; ~/projects/tools/agent-context-pipeline): material forwarded to Telegram is extracted on
-;; a NAS, `sync.sh' pulls it to ~/info-triage-inbox/ as one directory per item,
+;; The daily loop for the separate `agent-context-pipeline' project (its
+;; checkout is named by `ps/info-triage-sync-script'): material forwarded to
+;; Telegram is extracted on a NAS, `sync.sh' pulls it to ~/info-triage-inbox/
+;; as one directory per item,
 ;; and two generated views describe them -- `triage.md' for the routing agent
 ;; and `triage.org' for the person.  This module is the person's half: sync,
 ;; read the queue, follow an item into its artifacts, drop what is not worth
@@ -70,10 +71,13 @@ without the info-triage project never sees a menu for it."
   :type 'directory
   :group 'ps/info-triage)
 
-(defcustom ps/info-triage-sync-script
-  (expand-file-name "~/projects/tools/agent-context-pipeline/sync.sh")
-  "The info-triage synchronization script."
-  :type 'file
+(defcustom ps/info-triage-sync-script nil
+  "The pipeline's synchronization script: `sync.sh' in its checkout.
+
+There is no default, because where that project is checked out differs from
+machine to machine.  Set it in local.el.  Reading and dropping items work
+without it; only the two sync commands need it."
+  :type '(choice (const :tag "Not set" nil) file)
   :group 'ps/info-triage)
 
 (defcustom ps/info-triage-open-beside t
@@ -224,6 +228,8 @@ was processed."
 Asynchronous and quiet: the output buffer is only shown when the script
 fails, so a routine sync does not take a window away from what you were
 reading."
+  (unless ps/info-triage-sync-script
+    (user-error "Set `ps/info-triage-sync-script' in local.el to the pipeline's sync.sh"))
   (unless (file-executable-p ps/info-triage-sync-script)
     (user-error "Not executable: %s" ps/info-triage-sync-script))
   (let ((output (get-buffer-create "*info-triage sync*")))

@@ -95,11 +95,11 @@ item whose payload is twenty photos is one a file browser handles better: =e=
   menu + prefix keys/. It is hidden entirely when =ps/info-triage-directory=
   does not exist.
 - The queue, the sync commands and the drop are =lisp/ps-info-triage.el=.
-  Settings — where the inbox is, where the sync script is, which program =e=
-  hands a folder to, whether items open beside the queue — are in =config.org=
-  → /Settings → Info triage/ (=ps/info-triage-directory=,
-  =ps/info-triage-sync-script=, =ps/info-triage-external-command=,
-  =ps/info-triage-open-beside=).
+  Settings — where the inbox is, which program =e= hands a folder to, whether
+  items open beside the queue — are in =config.org= → /Settings → Info triage/
+  (=ps/info-triage-directory=, =ps/info-triage-external-command=,
+  =ps/info-triage-open-beside=). Where the sync script is
+  (=ps/info-triage-sync-script=) is machine-local and goes in =local.el=.
 - Opening files, back/forward and folder listings are shared with the rest of
   the config; their settings are listed in [[file:Files-and-navigation.org][Files & navigation]].
 - The two generated lists, and the sync script itself, belong to the

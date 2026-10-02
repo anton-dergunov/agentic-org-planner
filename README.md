@@ -1,20 +1,39 @@
-# Org-mode planning system for Emacs
+# Agentic Org Planner
 
-[![Tests](https://github.com/anton-dergunov/productivity-system/actions/workflows/tests.yml/badge.svg)](https://github.com/anton-dergunov/productivity-system/actions/workflows/tests.yml)
+[![Tests](https://github.com/anton-dergunov/agentic-org-planner/actions/workflows/tests.yml/badge.svg)](https://github.com/anton-dergunov/agentic-org-planner/actions/workflows/tests.yml)
 
-A minimalist Emacs configuration for planning your work and life in plain-text
-[Org Mode](https://orgmode.org/) files. The workflow is inspired by
-[Getting Things Done](https://en.wikipedia.org/wiki/Getting_Things_Done): you
-keep tasks and notes in a handful of Org files, and a clean, visual **agenda**
-shows what matters today — schedule, deadlines, high-priority work, what's in
-progress, and what to pick up next.
+An Org-mode planning system for Emacs, with an LLM agent that works on the plan
+with you. You keep tasks and notes in a handful of plain-text
+[Org Mode](https://orgmode.org/) files, in a workflow inspired by
+[Getting Things Done](https://en.wikipedia.org/wiki/Getting_Things_Done). A
+clean, visual **agenda** shows what matters today — schedule, deadlines,
+high-priority work, what's in progress, and what to pick up next — and an
+assistant in a side window reads and edits those same files, with every change
+shown to you as a diff.
 
 It doubles as a complete `~/.emacs.d`, so you can use it as your whole Emacs
-setup or borrow pieces for your own.
+setup or borrow pieces for your own. The assistant needs a Claude subscription;
+everything else works without it.
 
 <p align="center">
   <img src="screenshots/solarized-light.png" alt="The agenda under the Solarized Light theme" width="820">
 </p>
+
+## The agent
+
+- **It works on your files, under review** — the assistant (Claude Code) runs in
+  a side window, aware of the file you are in and the text you have selected.
+  The changes it proposes open as Emacs diffs that you step through and accept
+  or reject.
+- **It is told how your plan works** — an `AGENTS.md` in your Org folder says
+  what "task", "project" and "note" mean in your files, and a generated context
+  file passes on your TODO keywords, priorities, tags and saved searches, so it
+  follows your conventions instead of guessing them.
+- **It files what you captured** — the capture inbox collects the articles,
+  papers and clips you forwarded yourself during the day, and hands the ones
+  worth keeping to the assistant to file into your plans.
+
+See [AI integration](docs/AI-integration.org) for how to set it up and steer it.
 
 ## Highlights
 
@@ -55,16 +74,11 @@ setup or borrow pieces for your own.
   mode line. Files open the way each kind deserves: Markdown and HTML render
   inside Emacs, PDFs and video go to the system, and nothing is ever opened as
   raw bytes.
-- **An optional capture inbox** — review the articles, papers and clips you
-  forwarded yourself during the day as one list, look inside any of them without
-  leaving Emacs, throw away what is not worth keeping, and hand the rest to the
-  AI assistant to file into your plans. Needs the separate `info-triage`
-  project; invisible without it.
-- **An optional AI assistant** — a side-window helper (on your Claude
-  subscription) that reads and edits your notes, aware of what you have selected,
-  with its changes shown as diffs. Guide it with an `AGENTS.md` in your Org
-  folder; your TODO keywords and what each plan file is for are passed to it
-  automatically.
+- **A capture inbox** — review the articles, papers and clips you forwarded
+  yourself during the day as one list, look inside any of them without leaving
+  Emacs, throw away what is not worth keeping, and hand the rest to the
+  assistant. Needs the separate `agent-context-pipeline` project; invisible
+  without it.
 
 ## Quick start
 
@@ -75,7 +89,7 @@ setup or borrow pieces for your own.
    macOS, read [the note below](#macos-build-emacs-with-the-freeze-fix) first.
 2. Clone this repo as your Emacs config directory:
    ```bash
-   git clone https://github.com/anton-dergunov/productivity-system.git ~/.emacs.d
+   git clone https://github.com/anton-dergunov/agentic-org-planner.git ~/.emacs.d
    ```
    (On Windows this is usually `C:\Users\<USER>\AppData\Roaming\.emacs.d`.)
 3. Start Emacs. Packages download on first launch, then it offers to create a

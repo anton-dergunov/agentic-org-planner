@@ -473,7 +473,7 @@ its window for good and items open in the pane beside it. Turn it off to work
 one window at a time, with =‹= to get back to the list.
 #+begin_src emacs-lisp
   (setq ps/info-triage-directory        (expand-file-name "~/info-triage-inbox/info/")
-        ps/info-triage-sync-script      (expand-file-name "~/projects/tools/info-triage/sync.sh")
+        ps/info-triage-sync-script      (expand-file-name "~/projects/tools/agent-context-pipeline/sync.sh")
         ps/info-triage-external-command "code"
         ps/info-triage-open-beside      t)
 #+end_src

@@ -64,7 +64,7 @@ and so on) — see [[file:Developing.org][Developing & extending]].
 * Version
 There is no formal release number yet — the configuration is versioned by its
 Git history. To see what you're running, check the repository:
-https://github.com/anton-dergunov/productivity-system
+https://github.com/anton-dergunov/agentic-org-planner
 
 * History
 It started in 2021 as a personal Emacs setup and grew, mostly during 2026, into

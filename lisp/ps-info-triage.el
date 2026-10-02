@@ -2,7 +2,7 @@
 
 ;;; Commentary:
 ;; The daily loop for the separate `info-triage' project (checked out at
-;; ~/projects/tools/info-triage): material forwarded to Telegram is extracted on
+;; ~/projects/tools/agent-context-pipeline): material forwarded to Telegram is extracted on
 ;; a NAS, `sync.sh' pulls it to ~/info-triage-inbox/ as one directory per item,
 ;; and two generated views describe them -- `triage.md' for the routing agent
 ;; and `triage.org' for the person.  This module is the person's half: sync,
@@ -71,7 +71,7 @@ without the info-triage project never sees a menu for it."
   :group 'ps/info-triage)
 
 (defcustom ps/info-triage-sync-script
-  (expand-file-name "~/projects/tools/info-triage/sync.sh")
+  (expand-file-name "~/projects/tools/agent-context-pipeline/sync.sh")
   "The info-triage synchronization script."
   :type 'file
   :group 'ps/info-triage)

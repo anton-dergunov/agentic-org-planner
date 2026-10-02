@@ -101,7 +101,7 @@ sudo apt install ripgrep
 Clone this repository as your Emacs configuration directory:
 
 #+begin_src bash
-git clone https://github.com/anton-dergunov/productivity-system.git ~/.emacs.d
+git clone https://github.com/anton-dergunov/agentic-org-planner.git ~/.emacs.d
 #+end_src
 
 On Windows the directory is usually

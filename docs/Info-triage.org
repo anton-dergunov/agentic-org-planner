@@ -103,5 +103,6 @@ item whose payload is twenty photos is one a file browser handles better: =e=
 - Opening files, back/forward and folder listings are shared with the rest of
   the config; their settings are listed in [[file:Files-and-navigation.org][Files & navigation]].
 - The two generated lists, and the sync script itself, belong to the
-  =info-triage= project — see its =docs/EMACS.md=. Nothing in this
+  =agent-context-pipeline= project — see its =docs/reviewing-in-emacs.md=,
+  and =docs/architecture/sync.md= for the lists themselves. Nothing in this
   configuration writes to them.

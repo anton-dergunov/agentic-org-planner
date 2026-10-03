@@ -186,6 +186,18 @@
 ;;     is the right trade -- a few overhanging pixels of one glyph, rather
 ;;     than the layout of the whole pane.  The truncation arrow is suppressed
 ;;     along with it, because the right fringe here is the scroll-bar track.
+;;
+;; 13. The Escape key did nothing on its first press.  Nothing binds the
+;;     `escape' function key in a session buffer, so Emacs translates it to
+;;     ESC -- the Meta prefix -- and waits for the next key.  A second press
+;;     then completes `ESC ESC', which eat sends as two escapes, and Claude
+;;     reads those as a *double* Escape, a different command from one.  So
+;;     closing the `/' menu took one or two presses, and two did something
+;;     else.  `ps/claude-session-keys-mode' binds the function key to send a
+;;     single ESC at once.  It is the function key, not the ESC character,
+;;     so Meta chords and `C-[' still work; and it is a minor mode enabled
+;;     only in session buffers, not a binding in eat's keymaps, which every
+;;     eat shell shares.  (`claude-code-ide's own `C-<escape>' still works.)
 
 ;;; Code:
 
@@ -211,6 +223,7 @@
 (declare-function claude-code-ide--display-buffer-in-side-window "claude-code-ide")
 (declare-function claude-code-ide--terminal-position-keeper "claude-code-ide")
 (declare-function eat-yank "eat")
+(declare-function eat-term-send-string "eat")
 (defvar claude-code-ide-window-width)
 (defvar claude-code-ide-window-side)
 (defvar my-org-base-directory)
@@ -791,6 +804,26 @@ open, since the package only reports changes."
   (run-with-timer ps/claude-selection-connect-delay nil
                   #'ps/claude--resend-selection "session connected"))
 
+;;; Escape sends one Escape (fix #13)
+
+(defun ps/claude-send-escape ()
+  "Send a single Escape to the Claude Code session in the current buffer."
+  (interactive)
+  (when (ps/claude--terminal-live-p)
+    (eat-term-send-string eat-terminal "\e")))
+
+(defvar ps/claude-session-keys-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [escape] #'ps/claude-send-escape)
+    map)
+  "Keys of `ps/claude-session-keys-mode'.")
+
+(define-minor-mode ps/claude-session-keys-mode
+  "Keys that behave in a Claude Code session as they would in a terminal.
+Enabled in session buffers by `ps/claude--setup-buffer'.  See fix #13 in
+the Commentary."
+  :keymap ps/claude-session-keys-mode-map)
+
 ;;; Silent reload of stale, unmodified buffers Claude just wrote (fix #5)
 
 (defun ps/claude--revert-stale-unmodified (path)
@@ -911,6 +944,7 @@ is guarded by `ps/claude--session-buffer-p'."
     (setq-local eat--synchronize-scroll-function
                 #'ps/claude--synchronize-scroll)
     (ps/claude--suppress-terminal-exit-query)
+    (ps/claude-session-keys-mode 1)
     (add-hook 'post-command-hook #'ps/claude--note-panel-input nil t)))
 
 (defun ps/claude-setup ()
@@ -926,7 +960,8 @@ docks the panel `right'/`bottom' to match the frame's current shape,
 installs the per-buffer mode line, stops session buffers from soft-wrapping
 eat's rows and anchors their windows on eat's display region directly,
 binds Cmd-V to send pasted text to the
-process instead of the buffer, and stops a running session from prompting
+process instead of the buffer, makes one Escape press send one Escape,
+and stops a running session from prompting
 when Emacs quits.  Idempotent."
   (setq claude-code-ide-window-width ps/claude-window-width)
   (add-hook 'window-size-change-functions #'ps/claude--on-window-size-change)

@@ -755,5 +755,37 @@ fire at all."
       (kill-buffer buf)
       (should-not (ps/claude--resend-target)))))
 
+;;; Escape sends one Escape (fix #13)
+
+(ert-deftest ps/claude-test-escape-key-bound-in-session-buffer ()
+  "The Escape function key runs `ps/claude-send-escape' once the session
+keys are on, and the ESC character is still the Meta prefix."
+  (with-temp-buffer
+    (ps/claude-session-keys-mode 1)
+    (should (eq (key-binding [escape]) #'ps/claude-send-escape))
+    (should-not (eq (key-binding (kbd "ESC")) #'ps/claude-send-escape))))
+
+(ert-deftest ps/claude-test-escape-key-unbound-elsewhere ()
+  "Without the session keys, Escape keeps its default meaning."
+  (with-temp-buffer
+    (should-not (eq (key-binding [escape]) #'ps/claude-send-escape))))
+
+(ert-deftest ps/claude-test-send-escape-sends-one-escape ()
+  "One call sends exactly one ESC to the terminal."
+  (let ((sent nil))
+    (with-temp-buffer
+      (setq-local eat-terminal 'fake-terminal)
+      (cl-letf (((symbol-function 'eat-term-size) (lambda (_) '(80 . 24)))
+                ((symbol-function 'eat-term-send-string)
+                 (lambda (term string) (push (cons term string) sent))))
+        (ps/claude-send-escape)))
+    (should (equal sent '((fake-terminal . "\e"))))))
+
+(ert-deftest ps/claude-test-send-escape-without-terminal ()
+  "No terminal, nothing sent and no error."
+  (with-temp-buffer
+    (setq-local eat-terminal nil)
+    (should-not (ps/claude-send-escape))))
+
 (provide 'test-ps-claude)
 ;;; test-ps-claude.el ends here

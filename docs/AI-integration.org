@@ -16,6 +16,9 @@ It opens in a side panel rather than taking over whatever you're editing —
 docked to the right when your Emacs window is wider than it is tall, or to the
 bottom otherwise.
 
+Keys in the panel behave as in a terminal: one press of =Escape= closes a menu
+or interrupts the assistant, and =Cmd-V= pastes into the prompt.
+
 * What it can see
 The assistant is aware of the file you are looking at and the text you have
 selected in your Org files — select a few lines, click into the assistant's
@@ -149,7 +152,7 @@ set =ps/claude-no-exit-prompt= to =nil= to get the confirmation back.
   =ps/claude-resize-debounce-delay=, =ps/claude-reanchor-delay=,
   =ps/claude-resize-throttle-interval=, =ps/claude-no-exit-prompt=,
   =ps/claude-selection-max-lines=, =ps/claude-selection-max-chars=,
-  =ps/claude-selection-connect-delay=.
+  =ps/claude-selection-connect-delay=. Panel keys: =ps/claude-session-keys-mode-map=.
 - The context file: =lisp/ps-ai-context.el=; settings in =config.org= →
   /Settings → AI context sync (ps-ai-context.el)/ — =ps/ai-context-enabled=,
   =ps/ai-context-file=, =ps/ai-context-guide-file=,

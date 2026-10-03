@@ -12,7 +12,7 @@ backend; settings block `** Claude Code (ps-claude.el)`; package setup in
 [agent-context.md](agent-context.md); why this replaced an in-Emacs LLM client
 is in [in-emacs-llm.md](in-emacs-llm.md).
 
-The Commentary of `ps-claude.el` records each fix in detail, numbered 1 to 12.
+The Commentary of `ps-claude.el` records each fix in detail, numbered 1 to 13.
 This note keeps the reasons that span modules and the lessons that are not
 visible in the code.
 
@@ -91,6 +91,13 @@ just before exit (`ps/claude-no-exit-prompt`).
 **Cmd-V pastes into the session.** eat's keymaps rebind `C-y` to `eat-yank` but
 not `s-v`, which fell through to plain `yank` and was overwritten by eat's
 redraw at once; `s-v` is now `eat-yank` too.
+
+**Escape is one key press.** Nothing bound the `escape` function key in the
+panel, so Emacs turned it into ESC, the Meta prefix, and waited; the second
+press sent `ESC ESC`, which Claude reads as a double Escape, a different command.
+A minor mode enabled only in session buffers (`ps/claude-session-keys-mode`)
+binds the function key to send one ESC. It is not put in eat's keymaps, which
+every eat shell shares.
 
 **Tall glyphs are handled globally.** Claude's spinner, bullets and emoji used
 to raise the line height and make the text below them jump. That is fixed by

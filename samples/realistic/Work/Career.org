@@ -9,14 +9,18 @@ Possible directions:
 - Applied AI systems
 - Research engineering
 - Technical leadership
-- Agentic systems
+- *Agentic systems* — the strongest fit so far
 
 Need to optimize for:
 - long-term learning,
 - interesting technical challenges,
 - healthy work environment,
 - strong engineering culture.
+Decide by the /end of the quarter/; background in [[obsidian:Career strategy]].
 ** TODO [#B] Create yearly career review template
+- [X] Collect last year's review notes
+- [ ] Draft the questions
+- [ ] Try it on the 2025 review in =Vision/2025.org=
 
 DEADLINE: <2026-06-01 Mon>
 ** INPR Map current strengths and weaknesses          :reflection:think:
@@ -37,12 +41,13 @@ Weaknesses:
 *** TODO [#A] Improve understanding of modern retrieval systems :ml:search:
 SCHEDULED: <2026-05-24 Sun>
 Topics:
-- hybrid retrieval
-- late interaction
-- reranking
+- hybrid retrieval (=BM25= + dense)
+- late interaction (*ColBERT*)
+- reranking with a cross-encoder
 - chunking strategies
-- retrieval evaluation
-*** NEXT Build toy retrieval pipeline from scratch
+- retrieval evaluation: /recall@k/ and =nDCG=
+Start with the [[https://arxiv.org/abs/2004.12832][ColBERT paper]].
+*** NEXT Build toy retrieval pipeline from scratch in *PyTorch*
 SCHEDULED: <2026-05-22 Fri>
 *** TODO Learn practical evaluation of LLM systems
 DEADLINE: <2026-06-10 Wed>

@@ -36,6 +36,9 @@ while writing a task.
 You never tag a task with a situation. Situations are searches over the tags, so
 adding a new one costs one line and no re-tagging.
 
+#+CAPTION: The "A spare minute" situation
+[[file:../screenshots/situations.png]]
+
 * Opening a situation
 Choose one from *Productivity → Plan & Review → Situations*, or press =C-c p S=
 followed by the situation's own key. With the example set below:

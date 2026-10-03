@@ -9,6 +9,9 @@ spot conflicts, and move events between timezones. Each opens its own buffer
 with on-screen controls, so you can adjust options without remembering any
 syntax.
 
+#+CAPTION: Today's schedule, the conflicts it contains, and the free slots of the coming days
+[[file:../screenshots/schedule.png]]
+
 * Availability — find free slots
 Computes your open time over the coming days from the scheduled events in your
 Org files, so you can answer "when am I free?" at a glance.

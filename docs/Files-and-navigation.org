@@ -45,6 +45,9 @@ until you click or move in the tree. Turn this off with
 =ps/file-tree-follow-current-file=.
 
 ** Browse a file's outline in the tree
+#+CAPTION: A plan file opened out into its headings in the tree
+[[file:../screenshots/file-tree.png]]
+
 The tree isn't just files and folders — you can drill into a file's *headings*
 without opening it first. Where you click matters:
 

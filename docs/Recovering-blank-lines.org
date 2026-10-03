@@ -79,6 +79,9 @@ while ago:
 Either way the report is recomputed straight away.
 
 * Looking at a file side by side
+#+CAPTION: A damaged file beside its restored version, with the report on the right
+[[file:../screenshots/blank-lines.png]]
+
 When you want to see a change in context, or take some of a file but not all of
 it, press =d= (or =RET=, or click the file name) on a row.
 

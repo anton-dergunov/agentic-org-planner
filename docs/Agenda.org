@@ -9,8 +9,8 @@ today, built from all the tasks across your Org files. This page explains
 how to open it, how to read it, and the visual touches that make it pleasant to
 live in.
 
-#+CAPTION: The agenda under the Solarized Light theme
-[[file:../screenshots/solarized-light.png]]
+#+CAPTION: Today's agenda: the timeline with an overlap warning, then the task sections
+[[file:../screenshots/agenda.png]]
 
 * Opening it
 Press =C-c p a= (Productivity → Plan & Review → Agenda), or run =M-x

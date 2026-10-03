@@ -2,90 +2,96 @@
 
 [![Tests](https://github.com/anton-dergunov/agentic-org-planner/actions/workflows/tests.yml/badge.svg)](https://github.com/anton-dergunov/agentic-org-planner/actions/workflows/tests.yml)
 
-An Org-mode planning system for Emacs, with an LLM agent that works on the plan
-with you. You keep tasks and notes in a handful of plain-text
-[Org Mode](https://orgmode.org/) files, in a workflow inspired by
-[Getting Things Done](https://en.wikipedia.org/wiki/Getting_Things_Done). A
-clean, visual **agenda** shows what matters today — schedule, deadlines,
-high-priority work, what's in progress, and what to pick up next — and an
-assistant in a side window reads and edits those same files, with every change
-shown to you as a diff.
-
-It doubles as a complete `~/.emacs.d`, so you can use it as your whole Emacs
-setup or borrow pieces for your own. The assistant needs a Claude subscription;
-everything else works without it.
+Planning in plain-text [Org Mode](https://orgmode.org/) files, with a coding agent as a working
+participant: you talk to Claude Code about your plans, it reads and edits the same files you do,
+and every change it proposes reaches you as a diff to accept or reject. Around it is a complete
+Emacs configuration built for planning, so the editor looks like a modern tool from the first
+launch instead of like the 1980s.
 
 <p align="center">
-  <img src="screenshots/solarized-light.png" alt="The agenda under the Solarized Light theme" width="820">
+  <img src="screenshots/agent-audit.png" alt="Emacs with the file tree, the ML plan file, and Claude Code beside it reporting numbered audit findings for that file, with the diff of one accepted finding open" width="820">
 </p>
 
-## The agent
+The assistant needs a Claude subscription; everything else works without it. The configuration
+doubles as a complete `~/.emacs.d`, so you can use it whole or borrow pieces of it.
 
-- **It works on your files, under review** — the assistant (Claude Code) runs in
-  a side window, aware of the file you are in and the text you have selected.
-  The changes it proposes open as Emacs diffs that you step through and accept
-  or reject.
-- **It is told how your plan works** — built-in rules say what "task",
-  "project" and "note" mean in your files and what a well-shaped task looks
-  like, and your TODO keywords, priorities, tags and saved searches are passed
-  on from the config, so it follows your conventions instead of guessing them.
-  An `AGENTS.md` in your Org folder adds what is personal to you.
-- **It files what you captured** — the capture inbox collects the articles,
-  papers and clips you forwarded yourself during the day, and hands the ones
-  worth keeping to the assistant to file into your plans.
-- **It keeps your plans in shape** — two built-in skills: `/route` takes a
-  batch of captured items and works out, for each one, whether it's worth
-  keeping, whether you already have it, how to phrase it as a task, and where
-  it belongs. `/audit` reviews a plan file for outdated material, vague tasks
-  and things in the wrong place. Both report numbered findings and change
-  nothing until you pick which to apply.
+## Planning with an agent
 
-See [AI integration](docs/AI-integration.org) for how to set it up and steer it.
+- **It works on your files, under review.** Claude Code runs in a side panel and knows which
+  file you are in and what you have selected, so "this" means what you are looking at. The
+  changes it proposes open as Emacs diffs that you step through and accept or reject.
+- **It knows how your plan works.** Built-in rules say what "task", "project" and "note" mean in
+  your files and what a well-shaped task looks like. Your TODO states, priorities, tags and saved
+  searches are passed on from the configuration, so it follows your conventions instead of
+  guessing them. An `AGENTS.md` in your Org folder adds what is personal to you, such as where
+  your reference notes live; plans link into an Obsidian vault for those.
+- **Two skills keep the plans in shape.** `/audit` reviews a plan file for outdated material,
+  vague tasks and things in the wrong place. `/route` takes captured material, from an inbox
+  file, the capture inbox or text pasted into the chat, and works out for each item whether it
+  is worth keeping, whether you already have it, how to phrase it as a task and where it
+  belongs. Both report numbered findings and change nothing until you pick which to apply.
 
-## Highlights
+![The capture inbox's queue on the left and Claude Code on the right, having run /route on it: one line per item with its decision, keep, merge, duplicate or drop, and the plan file and section it goes to](screenshots/agent-route.png)
 
-- **A visual agenda** — your day at a glance: a real timeline, deadlines,
-  overdue items, high-priority, in-progress and next-up tasks, with category
-  icons, a glanceable icon for what each task is about, and compact
-  status/priority/date pills.
-- **A schedule view** — see the day as a timeline or a compact event list, with
-  a live now-indicator that refreshes every minute.
-- **Situations** — saved searches named by circumstance ("a spare minute", "on
-  foot", "screen in hand, offline"), so an awkward gap in the day has an answer
-  ready instead of turning into a scroll.
-- **Planning tools** — find free slots (availability), detect scheduling
-  conflicts, and shift timestamps between timezones.
-- **A file tree with icons** — browse your Org areas, switch between named file
-  sets, and optionally scope the agenda to the set you're viewing.
-- **Vaults** — keep several Org folders (work, personal, a shared project) and
-  switch between them from the file tree, Obsidian-style. Each vault carries its
-  own icons, file sets and situations, and syncs to its own Git remote.
-- **Capture and link** — quick capture, journaling, Obsidian-style links, and
-  one-key insertion of a web link with its page title fetched automatically.
-- **Many themes** — switch the entire look with one setting, or audition themes
-  live.
-- **Modern scrollbars** — an auto-hiding, theme-coloured scroll-position
-  indicator, plus smooth pixel scrolling.
-- **Selection you can see** — selected text is tinted instead of repainted, so
-  headings and TODO pills keep their colours, and it stays visible in a paler
-  shade when you move to another window.
-- **Blank-line recovery** — mobile Org apps throw away the blank lines you put
-  in your files. One command puts them back from your Git history, shows you
-  what it would restore and why, and saves only what you accept — never a
-  character of your text.
-- **Quiet quality-of-life touches** — multilingual typo checking, faded/folded
-  DONE tasks, live-preview markup that hides `*`/`/`/`[[]]` until you edit it,
-  a centred reading-width column for your plan files on wide windows, and
-  automatic background Git sync of your Org files.
-- **Back and forward** — every window keeps its own trail, with `‹ ›` on the
-  mode line. Files open the way each kind deserves: Markdown and HTML render
-  inside Emacs, PDFs and video go to the system, and nothing is ever opened as
-  raw bytes.
-- **A capture inbox** — review the articles, papers and clips you forwarded
-  yourself during the day as one list, look inside any of them without leaving
-  Emacs, throw away what is not worth keeping, and hand the rest to the
-  assistant. Needs the separate `agent-context-pipeline` project; invisible
-  without it.
+- **It files what you captured.** The articles, papers and posts you forward to yourself during
+  the day arrive as a numbered queue, prepared by a separate project, agent-context-pipeline
+  (not published yet): links resolved, the content extracted, related notes looked up. You read it in Emacs, drop
+  what is not worth keeping, and hand the rest to `/route`, which sees the same numbers.
+
+![The capture inbox in Emacs: the day's items listed by number with their kinds, one item selected, and its extracted content shown beside it with its sources, lead and possible related notes](screenshots/capture-inbox.png)
+
+See [AI integration](docs/AI-integration.org) and [Info triage](docs/Info-triage.org) for how
+to set it up and steer it.
+
+## Seeing your plan
+
+- **The agenda**: your day at a glance. A real timeline of today's events, then what is
+  scheduled, due soon, high-priority and in progress, with an icon for what each task is about
+  and compact pills for its state, priority and date.
+- **Situations**: saved searches named by circumstance ("a spare minute", "on foot", "screen in
+  hand, offline"), so an awkward gap in the day has an answer ready instead of turning into a
+  scroll.
+- **Planning tools**: free slots across the coming days, overlapping events, and shifting
+  timestamps between time zones.
+
+![The agenda for today: a timeline from 08:00 to 21:30 with a now-line and an overlap warning on two meetings, then sections for scheduled, due soon, other, high-priority and in-progress tasks, each with a status pill, a priority badge and a task icon](screenshots/agenda.png)
+
+![The agenda's schedule above the Conflicts view, which lists the two overlapping meetings, and the Availability view, which lists the free slots of the coming days](screenshots/schedule.png)
+
+![The "A spare minute" situation: the tasks tagged for a moment without a desk, each with its file's icon](screenshots/situations.png)
+
+## Plans that read well
+
+Org files are plain text, but they don't have to look like it. Headings, TODO states, priorities
+and tags render as clean badges and pills; bold, italic, code and links render without their
+markup, which comes back only while you edit it; checklists, dates and deadlines get icons;
+finished tasks fade. Plan files can be set in a proportional font and a centred reading column.
+
+![The Career plan file: headings in colour, TODO and INPR badges, priority badges, tag pills, a checklist, scheduled and deadline icons, bold, italic and code without their markup, and links](screenshots/plan-file.png)
+
+The file tree shows your Org areas with icons, and a plan file opens out into its headings, so it
+doubles as an outline of what is in each file. Several Org folders, called **vaults**, can be
+kept and switched between from the tree, each with its own icons, saved searches and Git remote.
+
+![The file tree with the ML plan file opened out into its sections, from Foundation Models to Practical Experiments, beside the file itself](screenshots/file-tree.png)
+
+## Tools
+
+- **Blank-line recovery.** Mobile Org apps such as Beorg and Orgzly throw away the blank lines
+  you put between headings. One command puts them back from your Git history, shows you what
+  it would restore and why, and saves only what you accept, never changing a character of your
+  text.
+- **Background Git sync** of your Org folder, with its state in the mode line, and a one-time
+  setup that keeps a Dropbox folder and Git from corrupting each other.
+
+![Blank-line recovery reviewing a file damaged by a mobile app: the file as it is beside the version with its blank lines restored, and the report giving the reason for each one](screenshots/blank-lines.png)
+
+## Small UI tweaks
+
+For Emacs users, the fixes that make it pleasant to live in: a quiet mode line built for
+planning, an auto-hiding scroll indicator with smooth scrolling, multilingual typo checking that
+flags only what is likely wrong, live-preview markup, and themes you can audition live (see the
+[gallery](docs/Customization.org)).
 
 ## Quick start
 
@@ -144,4 +150,6 @@ Jump straight to:
 ## Developing
 
 Run Emacs straight from this repo (no install), run the tests, and extend it
-with new modules — see [docs/Developing.org](docs/Developing.org).
+with new modules — see [docs/Developing.org](docs/Developing.org). The
+screenshots above are retaken by hand from the shot list in
+[`screenshots/README.md`](screenshots/README.md).

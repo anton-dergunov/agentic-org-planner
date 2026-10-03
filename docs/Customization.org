@@ -75,44 +75,18 @@ dark backgrounds alike.
 before you commit. Set =ps/color-theme= to keep it.
 
 ** Gallery
-The default theme, *Solarized Light*:
+The default theme, *Solarized Light*, on a plan file:
 
 #+CAPTION: Solarized Light (default)
-[[file:../screenshots/solarized-light.png]]
+[[file:../screenshots/plan-file.png]]
 
-A few others — light:
+Two others, one light and one dark:
 
-#+CAPTION: Modus Operandi (light, accessible)
-[[file:../screenshots/modus-operandi.png]]
+#+CAPTION: Tango (light, built in)
+[[file:../screenshots/plan-file-tango.png]]
 
-#+CAPTION: ef-day (light, warm)
-[[file:../screenshots/ef-day.png]]
-
-#+CAPTION: Doom One Light
-[[file:../screenshots/doom-one-light.png]]
-
-#+CAPTION: Catppuccin Latte (light, pastel)
-[[file:../screenshots/batppuccin-latte.png]]
-
-…and dark:
-
-#+CAPTION: Solarized Dark
-[[file:../screenshots/solarized-dark.png]]
-
-#+CAPTION: Modus Vivendi (dark, accessible)
-[[file:../screenshots/modus-vivendi.png]]
-
-#+CAPTION: Doom One (dark)
-[[file:../screenshots/doom-one.png]]
-
-#+CAPTION: Tokyo Night (dark)
-[[file:../screenshots/tokyo-night.png]]
-
-#+CAPTION: Catppuccin Mocha (dark, pastel)
-[[file:../screenshots/batppuccin-mocha.png]]
-
-#+CAPTION: Gruvbox Dark
-[[file:../screenshots/gruvbox-dark-medium.png]]
+#+CAPTION: Modus Vivendi (dark, built in)
+[[file:../screenshots/plan-file-modus-vivendi.png]]
 
 * Fonts
 Fonts are set in =config.org= → /Settings → Fonts/, by *role* rather than one

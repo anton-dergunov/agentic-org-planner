@@ -718,3 +718,70 @@ says what the workaround is for without needing treemacs installed."
                   :type 'wrong-type-argument)))
 
 ;;; test-ps-file-tree.el ends here
+
+;;; -------------------------------------------------------
+;;; ps/file-tree--fill-start / --fill-window
+;;; -------------------------------------------------------
+
+(defmacro ps/file-tree-test--with-lines (n start-line &rest body)
+  "Show a buffer of N lines in the only window, starting at START-LINE.
+Binds `win' and runs BODY with the buffer current.  In batch the frame is
+a terminal one, so pixel sizes are line counts."
+  (declare (indent 2))
+  `(let ((buf (generate-new-buffer " *fill-test*")))
+     (unwind-protect
+         (save-window-excursion
+           (delete-other-windows)
+           (let ((win (selected-window)))
+             (set-window-buffer win buf)
+             (with-current-buffer buf
+               (dotimes (i ,n) (insert (format "line %d\n" i)))
+               (goto-char (point-min))
+               (forward-line (1- ,start-line))
+               (set-window-start win (point))
+               (set-window-point win (point))
+               ,@body)))
+       (kill-buffer buf))))
+
+(ert-deftest ps/file-tree--fill-start-whole-tree-fits ()
+  "When the whole buffer fits, the start goes back to the top."
+  (ps/file-tree-test--with-lines 10 5
+    (should (= (ps/file-tree--fill-start win) (point-min)))))
+
+(ert-deftest ps/file-tree--fill-start-at-top-is-nil ()
+  "A window already at the top needs nothing."
+  (ps/file-tree-test--with-lines 10 1
+    (should-not (ps/file-tree--fill-start win))))
+
+(ert-deftest ps/file-tree--fill-start-filled-window-is-nil ()
+  "A window whose text from its start reaches the bottom is left alone."
+  (ps/file-tree-test--with-lines 100 5
+    (should-not (ps/file-tree--fill-start win))))
+
+(ert-deftest ps/file-tree--fill-start-end-lands-at-bottom ()
+  "A long buffer scrolled too far comes back just far enough to fill the
+window: the text from the new start fits, one line earlier it would not."
+  (ps/file-tree-test--with-lines 100 95
+    (let ((start (ps/file-tree--fill-start win))
+          (avail (window-body-height win t)))
+      (should start)
+      (should (< start (window-start win)))
+      (should (<= (ps/file-tree--text-height win start) avail))
+      (should (> (ps/file-tree--text-height
+                  win (save-excursion (goto-char start) (forward-line -1) (point)))
+                 avail)))))
+
+(ert-deftest ps/file-tree--fill-window-keeps-point-visible ()
+  "Filling moves the start back and point stays on screen.
+Checked by geometry: `pos-visible-in-window-p' needs a redisplay batch
+never runs, and reports even the window start as invisible there."
+  (ps/file-tree-test--with-lines 100 95
+    (goto-char (point-max))
+    (forward-line -1)
+    (set-window-point win (point))
+    (let ((old (window-start win)))
+      (ps/file-tree--fill-window win)
+      (should (< (window-start win) old))
+      (should (<= (cdr (window-text-pixel-size
+                        win (window-start win) (window-point win)))
+                  (window-body-height win t))))))

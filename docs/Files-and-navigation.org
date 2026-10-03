@@ -36,8 +36,10 @@ from what the agenda scans; both lists are described in
 [[file:Customization.org][Customization & appearance]].
 
 ** Following the file you're editing
-The tree highlights whichever file you are editing, without expanding folders or
-scrolling on its own. If what you're editing isn't visible in the tree — hidden,
+The tree highlights whichever file you are editing, without expanding folders.
+If that file is scrolled out of view, the tree scrolls to show it — never past
+its last entry, so there is no blank space below the tree while part of it is
+scrolled away. If what you're editing isn't visible in the tree — hidden,
 filtered out by a file set, or inside a collapsed folder — there is no highlight
 until you click or move in the tree. Turn this off with
 =ps/file-tree-follow-current-file=.

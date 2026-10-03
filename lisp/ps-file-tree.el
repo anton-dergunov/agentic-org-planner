@@ -41,6 +41,14 @@
 ;; Inside `window-size-change-functions', find the tree per frame
 ;; (`ps/file-tree--frame-window'): `treemacs-get-local-window' consults the
 ;; selected frame, and the hook can report another one.
+;;
+;; The tree never shows blank space below its end while lines are hidden above
+;; (`ps/file-tree--fill-window').  Emacs scrolls a window down to reach point
+;; but never scrolls it back up, so a window scrolled to a file near the end
+;; keeps that scroll after it grows or the tree gets shorter -- at startup the
+;; frame reaches its full size after the first follow, which left the whole
+;; tree fitting on screen with a third of it scrolled away.  Checked after a
+;; follow, a resize and every render.
 
 ;;; Code:
 
@@ -771,7 +779,10 @@ cannot retrigger itself."
               (when (and hide-root (not (memq state '(root-node-open root-node-closed))))
                 (ps/file-tree--trim-indent beg)))
             (setq pos (next-button pos)))))
-      (setq ps/file-tree--decorated-tick (buffer-chars-modified-tick)))))
+      (setq ps/file-tree--decorated-tick (buffer-chars-modified-tick))
+      ;; A collapse near the end shortens the tree under a scrolled window.
+      (dolist (win (get-buffer-window-list (current-buffer) nil t))
+        (ps/file-tree--fill-window win)))))
 
 (defun ps/file-tree--decorate-buffer ()
   "Decorate the file tree buffer, wherever it is called from."
@@ -849,6 +860,50 @@ the tree."
                treemacs--fringe-indicator-overlay)
       (delete-overlay treemacs--fringe-indicator-overlay))))
 
+(defun ps/file-tree--text-height (window from)
+  "Pixel height of WINDOW's buffer text from FROM to the end.
+Measured by the display engine, so the section gaps (overlay strings of a
+different height) and the hidden root line count as they are drawn."
+  (cdr (window-text-pixel-size window from (point-max))))
+
+(defun ps/file-tree--fill-start (window)
+  "Return the start WINDOW should have so it shows no space below the end.
+Nil when no change is needed: the window starts at the top already, or the
+text from its start to the end still fills it.  Otherwise the latest start
+at which that text fits -- `point-min' when the whole tree fits.  Only ever
+earlier than the current start, with the end still in view, so whatever was
+visible stays visible.  Call with WINDOW's buffer current."
+  (let ((start (window-start window))
+        (avail (window-body-height window t)))
+    (when (and (> start (point-min))
+               (< (ps/file-tree--text-height window start) avail))
+      (if (<= (ps/file-tree--text-height window (point-min)) avail)
+          (point-min)
+        (save-excursion
+          (goto-char start)
+          (let ((best start))
+            (while (and (= (vertical-motion -1 window) -1)
+                        (<= (ps/file-tree--text-height window (point)) avail))
+              (setq best (point)))
+            (unless (= best start) best)))))))
+
+(defun ps/file-tree--fill-window (window)
+  "Scroll WINDOW back so the tree's end does not leave blank space below it.
+The empty space appears when the window was scrolled down to reach a file
+near the end and later grew, or the tree got shorter: Emacs never scrolls
+back by itself.  Enforced after a follow, after a resize and after each
+render (see the callers)."
+  (when (window-live-p window)
+    (with-current-buffer (window-buffer window)
+      (when-let* ((start (ps/file-tree--fill-start window)))
+        (set-window-start window start)))))
+
+(defun ps/file-tree-fill (&optional frame)
+  "Keep the file tree on FRAME from showing blank space below its end.
+For `window-size-change-functions'."
+  (when-let* ((win (ps/file-tree--frame-window (or frame (selected-frame)))))
+    (ps/file-tree--fill-window win)))
+
 (defun ps/file-tree--follow ()
   "Point the file tree's highlight at the current buffer's file.
 Clears the highlight instead when that file has no entry in the tree."
@@ -868,11 +923,19 @@ Clears the highlight instead when that file has no entry in the tree."
             ;; `with-selected-window' rather than `select-window': focus stays
             ;; in the buffer being edited.  `set-window-point' makes the
             ;; position stick, and `hl-line-highlight' redraws the highlight.
+            ;; A file scrolled out of view is brought back explicitly rather
+            ;; than left to redisplay, whose recentring knows nothing about
+            ;; the tree's end; `ps/file-tree--fill-window' then pulls the
+            ;; start back so the end sits at the bottom, not mid-window.
             (with-selected-window win
-              (goto-char pos)
-              (when (fboundp 'treemacs--evade-image) (treemacs--evade-image))
-              (hl-line-highlight)
-              (set-window-point win (point)))
+              (let ((offscreen (not (pos-visible-in-window-p pos win))))
+                (goto-char pos)
+                (when (fboundp 'treemacs--evade-image) (treemacs--evade-image))
+                (hl-line-highlight)
+                (set-window-point win (point))
+                (when offscreen
+                  (recenter (/ (window-body-height win) 2)))
+                (ps/file-tree--fill-window win)))
           (ps/file-tree--clear-highlight buf))))))
 
 (defun ps/file-tree--follow-schedule ()
@@ -886,9 +949,12 @@ Clears the highlight instead when that file has no entry in the tree."
 ;;;###autoload
 (defun ps/file-tree-follow-setup ()
   "Make the file tree's highlight track the buffer being edited.
-Call once from the treemacs `:config' block; `ps/file-tree-follow-current-file'
-is re-checked on every run, so it can be toggled at any time."
-  (add-hook 'buffer-list-update-hook #'ps/file-tree--follow-schedule))
+Also keeps the tree from showing blank space below its end after a resize
+\(`ps/file-tree-fill').  Call once from the treemacs `:config' block;
+`ps/file-tree-follow-current-file' is re-checked on every run, so it can be
+toggled at any time."
+  (add-hook 'buffer-list-update-hook #'ps/file-tree--follow-schedule)
+  (add-hook 'window-size-change-functions #'ps/file-tree-fill))
 
 ;;; Finding a node whose label no longer spells out its file name
 

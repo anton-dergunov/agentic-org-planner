@@ -61,7 +61,18 @@ take the git face and lose its category styling.
 **Follow only moves the highlight.** `ps/file-tree--follow` highlights the
 current file if it is already on screen, and never expands a folder or
 re-roots the tree, so the tree never shifts under you. treemacs's own follow
-modes are off.
+modes are off. "On screen" means drawn in the tree, not inside the window's
+view: a drawn file scrolled out of view is brought into view.
+
+**No blank space below the end.** Emacs scrolls a window down to reach point
+but never scrolls it back, so a window scrolled to a file near the end kept
+that scroll after the frame reached full size at startup — the whole tree fit,
+yet a third of it was scrolled away above blank space.
+`ps/file-tree--fill-window` pulls the start back until the end sits at the
+bottom, measured with `window-text-pixel-size` so the section gaps count at
+their drawn height. It runs after a follow (which positions an out-of-view file
+itself rather than leaving it to redisplay's recentring), after every resize
+and after every render.
 
 **One click opens a file** in the most recently used content window, never a
 side or dedicated one (`ps/file-tree--target-window`). Excluding every side and

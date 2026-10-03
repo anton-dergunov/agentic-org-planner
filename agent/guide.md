@@ -196,3 +196,13 @@ so never restate them elsewhere.
   new tag against the whole list.
 - In Emacs searches, Org's match syntax has **no parentheses**: `|` separates whole
   clauses, so `(tablet or phone) and not online` is written `tablet-online|phone-online`.
+
+The situations declared in `workspace.org` drive Emacs directly. Mobile apps get them
+transcribed by hand, and each supports full boolean logic over tags:
+
+- **beorg** — `filter-add` in `init.org` (beorg's settings file, at the top of these notes)
+  takes a Scheme lambda; `item-tags` returns the item's tags and `item-state` its keyword.
+- **Orgzly** — `t.TAG` matches including inherited tags, `tn.TAG` own tags only; AND is
+  implicit, `or` is explicit, `.` negates (`.t.online`), and parentheses work. Prepend
+  `it.todo` — *not* `.it.done` — so plain section headings, which have no keyword and so
+  are not DONE either, stay out of the results.

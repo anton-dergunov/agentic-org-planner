@@ -133,7 +133,11 @@ record machine-specific paths. The same model as the paper library's engine.
   lexically or through the link — and would also work from a plugin cache.
 - **A real folder in the vault is never replaced.** It is the user's own skill
   and shadows the shipped one. That is also why moving a vault from hand-copied
-  skills to the links needs the old folders removed by hand once.
+  skills to the links needs the old folders removed by hand once. If the vault is
+  a git repository that tracked those files, staging their deletion file by file
+  (as editors do) fails with "pathspec … is beyond a symbolic link", because the
+  path now runs through a link. `git rm -r --cached <folder>` or `git add -A`
+  (what git sync runs) stages it.
 - **Skills read machine facts from the generated context**, never from a path
   written into the skill: the file index and the capture inbox location both come
   from `.claude/generated-context.md`.

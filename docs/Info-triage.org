@@ -15,7 +15,12 @@ covers the Emacs half — reading the queue, looking at what an item actually co
 throwing away what is not worth keeping.
 
 *This whole feature is optional.* If the inbox folder does not exist on your
-machine, the Triage menu is not shown at all and nothing here applies.
+machine, the Triage menu is not shown at all and nothing here applies. To try it
+without the pipeline, point =ps/info-triage-directory= at the small sample queue
+in =samples/info-triage/info/=.
+
+#+CAPTION: The queue, with one item's extracted content open below it
+[[file:../screenshots/capture-inbox.png]]
 
 * The daily loop
 

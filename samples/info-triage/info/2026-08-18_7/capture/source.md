@@ -1,0 +1,1 @@
+https://www.linkedin.com/posts/maxime-labonne_how-to-steal-reasoning-without-reasoning-share-7493580874224152576-kiKE/?utm_source=share&utm_medium=member_desktop&rcm=ACoAAAIl92gBMuiYCPKqqasQ9_KsyP493ekzu4g

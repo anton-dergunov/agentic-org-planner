@@ -109,7 +109,9 @@ helpers make a retake repeatable:
   them. Nothing in the repository changes.
 - =scripts/screenshot.el=, loaded into a dev session started on that folder,
   fixes the frame size and adds =M-x ps/screenshot-frame=, which saves the frame
-  to =screenshots/= at 1920×1200.
+  to =screenshots/= at 1920×1200 with transparent corners, and
+  =M-x ps/screenshot-inline-diff=, which shows a change the assistant proposed
+  inline in one buffer.
 
 It is macOS-only: it uses =screencapture=, so whatever launches Emacs needs
 Screen Recording permission.

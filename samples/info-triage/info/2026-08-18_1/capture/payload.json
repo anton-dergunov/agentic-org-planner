@@ -1,0 +1,32 @@
+{
+  "channel_chat_created": false,
+  "delete_chat_photo": false,
+  "entities": [
+    {
+      "length": 245,
+      "offset": 0,
+      "type": "url"
+    }
+  ],
+  "group_chat_created": false,
+  "link_preview_options": {
+    "url": "https://www.linkedin.com/posts/sebastianraschka_just-saw-that-the-llms-from-scratch-repository-share-7491503037501333504-0Lvv/?utm_source=social_share_send&utm_medium=android_app&rcm=ACoAAAIl92gBMuiYCPKqqasQ9_KsyP493ekzu4g&utm_campaign=share_via"
+  },
+  "supergroup_chat_created": false,
+  "text": "https://www.linkedin.com/posts/sebastianraschka_just-saw-that-the-llms-from-scratch-repository-share-7491503037501333504-0Lvv/?utm_source=social_share_send&utm_medium=android_app&rcm=ACoAAAIl92gBMuiYCPKqqasQ9_KsyP493ekzu4g&utm_campaign=share_via",
+  "chat": {
+    "first_name": "User",
+    "id": 1234567890,
+    "type": "private",
+    "username": "user"
+  },
+  "date": 1787047392,
+  "message_id": 174,
+  "from": {
+    "first_name": "User",
+    "id": 1234567890,
+    "is_bot": false,
+    "language_code": "en",
+    "username": "user"
+  }
+}

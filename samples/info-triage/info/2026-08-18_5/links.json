@@ -1,0 +1,21 @@
+{
+  "links": [
+    {
+      "n": 1,
+      "raw": "https://github.com/rasbt/mini-coding-agent",
+      "canonical": "https://github.com/rasbt/mini-coding-agent",
+      "handler": "document",
+      "identity": "github-com-mini-coding-agent-3b6302ee92",
+      "priority": 2,
+      "status": "resolved",
+      "extraction": "complete",
+      "from_segment": null,
+      "label": null,
+      "title": "GitHub - rasbt/mini-coding-agent: Minimal and readable coding agent harness implementation in Python to explain the core components of coding agents.",
+      "reason": null,
+      "origin": "body",
+      "duplicate_of": null,
+      "via": null
+    }
+  ]
+}

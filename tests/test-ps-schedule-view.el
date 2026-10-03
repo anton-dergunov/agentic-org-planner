@@ -211,13 +211,23 @@
     (should (string-match-p "13:47" s))))
 
 (ert-deftest ps/schedule-view--now-line-str/bar-at-col ()
-  ;; ┆ is at column (left-margin + extra-margin + time-col-width + 1).
+  ;; ┆ is anchored at the rows' bar column, not reached by counting dashes.
   (let* ((s (ps/schedule-view--now-line-str 900 80))
-         (plain (substring-no-properties s))
-         (expected-col (+ ps/agenda-layout-left-margin-cols
-                          ps/schedule-view-extra-margin-cols
-                          (1+ ps/schedule-view--time-col-width))))
-    (should (= ?┆ (aref plain expected-col)))))
+         (bar (string-search "┆" s)))
+    (should (equal (get-text-property (1- bar) 'display s)
+                   `(space :align-to ,(ps/schedule-view--bar-col))))))
+
+(ert-deftest ps/schedule-view--now-line-str/dash-width ()
+  ;; Dashes half a column wide take twice as many to reach the bar.
+  (let* ((left (ps/schedule-view--left-cols))
+         (bar-col (1+ ps/schedule-view--time-col-width))
+         (dashes-before-bar
+          (lambda (dash-cols)
+            (let ((s (substring-no-properties
+                      (ps/schedule-view--now-line-str 900 80 dash-cols))))
+              (cl-count ?┄ (substring s left (string-search "┆" s)))))))
+    (should (= bar-col (funcall dashes-before-bar 1.0)))
+    (should (= (* 2 bar-col) (funcall dashes-before-bar 0.5)))))
 
 (ert-deftest ps/schedule-view--now-line-str/narrow-window ()
   ;; Should not error even with a very narrow window.

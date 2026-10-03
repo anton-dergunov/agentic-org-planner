@@ -38,4 +38,4 @@ def test_build_lands_the_anchor_on_today(tmp_path):
     assert "<2026-10-03 Sat 10:00-12:00>" in career
     assert "2026-05-21" not in career
     assert not (notes / ".claude").exists()
-    assert (notes / ".git").is_dir()
+    assert not (notes / ".git").exists()

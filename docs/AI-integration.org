@@ -8,7 +8,7 @@ An optional AI assistant runs in a side window and can read and edit your Org
 notes, with its proposed changes shown to you as Emacs diffs. It runs on your
 Claude Pro/Max subscription.
 
-#+CAPTION: The assistant beside a plan file, with the diff of a change it proposed
+#+CAPTION: The assistant beside a plan file, with a change it proposed shown inline
 [[file:../screenshots/agent-audit.png]]
 
 * Opening it
@@ -96,6 +96,9 @@ file's =#+SUBTITLE:= instead, and put rules of your own in =AGENTS.md=.
 * Skills: filing and reviewing your plans
 Two skills come with this configuration, and the assistant has them in every
 vault:
+
+#+CAPTION: =/route= deciding where one day's captured items belong
+[[file:../screenshots/agent-route.png]]
 
 - =/route= — files captured material where it belongs. Give it a slice of your
   inbox ("route the first ten items in Inbox.org"), text pasted into the chat, or

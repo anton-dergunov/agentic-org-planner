@@ -1,0 +1,21 @@
+{
+  "links": [
+    {
+      "n": 1,
+      "raw": "https://www.instagram.com/reel/DdIYMd4qHP1/?stkn=dDd2dWF0bGJ6eXAy",
+      "canonical": "https://www.instagram.com/reel/DdIYMd4qHP1/?stkn=dDd2dWF0bGJ6eXAy",
+      "handler": "instagram",
+      "identity": "DdIYMd4qHP1",
+      "priority": 2,
+      "status": "resolved",
+      "extraction": "complete",
+      "from_segment": 1,
+      "label": null,
+      "title": "Chris Oh on Instagram: \"Underrated websites that will make you better at data science Comment “data” for the links #tech #datascience\"",
+      "reason": null,
+      "origin": "entity",
+      "duplicate_of": null,
+      "via": null
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+## Segment 1 — text
+
+[Just saw that the LLMs-from-scratch repository passed 100,000 stars on GitHub! This is super cool and motivating. I am really happy to see that this open-source repo has helped so many people… | Sebastian Raschka, PhD | 68 comments](https://www.linkedin.com/posts/sebastianraschka_just-saw-that-the-llms-from-scratch-repository-share-7491503037501333504-0Lvv/)

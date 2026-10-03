@@ -1,0 +1,21 @@
+{
+  "links": [
+    {
+      "n": 1,
+      "raw": "https://www.linkedin.com/posts/sebastianraschka_just-saw-that-the-llms-from-scratch-repository-share-7491503037501333504-0Lvv/?utm_source=social_share_send&utm_medium=android_app&rcm=ACoAAAIl92gBMuiYCPKqqasQ9_KsyP493ekzu4g&utm_campaign=share_via",
+      "canonical": "https://www.linkedin.com/posts/sebastianraschka_just-saw-that-the-llms-from-scratch-repository-share-7491503037501333504-0Lvv/",
+      "handler": "linkedin",
+      "identity": "7491503037501333504",
+      "priority": 2,
+      "status": "resolved",
+      "extraction": "complete",
+      "from_segment": 1,
+      "label": null,
+      "title": "Just saw that the LLMs-from-scratch repository passed 100,000 stars on GitHub! This is super cool and motivating. I am really happy to see that this open-source repo has helped so many people… | Sebastian Raschka, PhD | 68 comments",
+      "reason": null,
+      "origin": "entity",
+      "duplicate_of": null,
+      "via": null
+    }
+  ]
+}

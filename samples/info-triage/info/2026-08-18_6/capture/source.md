@@ -1,0 +1,1 @@
+https://www.linkedin.com/posts/sebastianraschka_just-saw-that-the-llms-from-scratch-repository-share-7491503037501333504-0Lvv/

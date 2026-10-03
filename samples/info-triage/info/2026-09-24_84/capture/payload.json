@@ -1,0 +1,32 @@
+{
+  "channel_chat_created": false,
+  "delete_chat_photo": false,
+  "entities": [
+    {
+      "length": 69,
+      "offset": 0,
+      "type": "url"
+    }
+  ],
+  "group_chat_created": false,
+  "link_preview_options": {
+    "url": "https://instagram.com/reel/Dc8d-JMN21a?stkn=MWJ1NnVuMjRiMmF4Yw=="
+  },
+  "supergroup_chat_created": false,
+  "text": "https://www.instagram.com/reel/Dc8d-JMN21a/?stkn=MWJ1NnVuMjRiMmF4Yw==",
+  "chat": {
+    "first_name": "User",
+    "id": 1234567890,
+    "type": "private",
+    "username": "user"
+  },
+  "date": 1790237668,
+  "message_id": 238,
+  "from": {
+    "first_name": "User",
+    "id": 1234567890,
+    "is_bot": false,
+    "language_code": "en",
+    "username": "user"
+  }
+}

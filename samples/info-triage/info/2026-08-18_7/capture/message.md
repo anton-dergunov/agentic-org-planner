@@ -1,0 +1,1 @@
+[🥷 How to Steal Reasoning Without Reasoning Traces Reasoning models keep their internal traces private and return only a final answer with a short summary. That is meant to stop competitors from… | Maxime Labonne | 19 comments](https://www.linkedin.com/posts/maxime-labonne_how-to-steal-reasoning-without-reasoning-share-7493580874224152576-kiKE/)

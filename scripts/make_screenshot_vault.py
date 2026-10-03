@@ -9,9 +9,8 @@ timestamp by the same number of days, so ANCHOR lands on TODAY and the whole
 plan keeps its shape around it.  Weekday names are rewritten to match; times,
 ranges and repeaters are kept.  A journal file named by its date moves with it.
 
-The copy also gets the capture-inbox fixture (samples/info-triage/), its own
-git repository with one commit (so it looks like a synced vault), and a neutral
-name (notes/) because the path shows in the mode line.
+The copy also gets the capture-inbox fixture (samples/info-triage/) beside it,
+and a neutral name (notes/) because the path shows in the agent's panel.
 
 Nothing here touches the repo: the copy is where Claude Code's edits land
 during a screenshot session.
@@ -28,7 +27,6 @@ import datetime as dt
 import os
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -81,11 +79,6 @@ def build(dest, today):
     fixture = REPO / "samples/info-triage"
     if fixture.is_dir():
         shutil.copytree(fixture, dest / "info-triage-inbox")
-    git = ["git", "-C", str(notes), "-c", "user.name=Notes",
-           "-c", "user.email=notes@example.com"]
-    subprocess.run(git[:3] + ["init", "-q"], check=True)
-    subprocess.run(git + ["add", "-A"], check=True)
-    subprocess.run(git + ["commit", "-q", "-m", "Notes"], check=True)
     return notes, days
 
 

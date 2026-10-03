@@ -14,9 +14,15 @@
 ;; which no script can replay.
 ;;
 ;; What it does fix is everything that must not vary between shots: the frame
-;; is 1280x800 points (16:10, 2560x1600 pixels on a Retina display), and every
-;; picture is scaled to 1920x1200 and quantized, like the pictures of the
-;; agent-context-pipeline project they sit beside on the blog.
+;; is 1067x667 points (16:10; 1200x750 for the scenes with the Claude panel),
+;; every picture is scaled to 1920x1200 and quantized, like the pictures of the
+;; agent-context-pipeline project they sit beside on the blog, and the window
+;; is captured by its id, so the rounded corners come out transparent.
+;;
+;; It also takes out what only distracts in a picture, for this session only:
+;; the sync label in the file tree's mode line, and Ediff's "Type ? for help".
+;; `ps/screenshot-inline-diff' shows a diff Claude proposed inline in one
+;; buffer, which reads better in a picture than two panes side by side.
 ;;
 ;; The dates in the sample notes need no faking: the vault script moves them so
 ;; their busiest day is today, so the schedule view, availability and conflicts
@@ -28,8 +34,9 @@
 ;; this Emacs to the front first.
 
 (require 'server)
+(require 'seq)
 
-(defvar ps/screenshot-size '(1280 . 800)
+(defvar ps/screenshot-size '(1067 . 667)
   "Outer size of the frame, in points, while taking pictures.")
 
 (defvar ps/screenshot-width 1920
@@ -38,6 +45,9 @@
 (defvar ps/screenshot-directory
   (expand-file-name "screenshots/" user-emacs-directory)
   "Where pictures are saved.")
+
+(defvar ps/screenshot-corner-radius 20
+  "Corner radius, in saved pixels, for the mask used when a window capture fails.")
 
 (defun ps/screenshot-fit-frame (&optional frame)
   "Make FRAME's outer size exactly `ps/screenshot-size'."
@@ -54,14 +64,38 @@
                         (+ (frame-text-height frame) (- (cdr ps/screenshot-size) (- bottom top)))
                         t)))))
 
+(defun ps/screenshot--capture (out)
+  "Capture the selected frame's window to OUT; non-nil when it worked.
+By window id first, which keeps the rounded corners transparent; by screen
+region otherwise, with the corners masked afterwards."
+  (let ((id (frame-parameter nil 'window-id)))
+    (or (and id
+             (eq 0 (call-process "screencapture" nil nil nil "-x" "-o"
+                                 (format "-l%s" id) out))
+             (file-exists-p out))
+        (pcase-let ((`(,left ,top ,right ,bottom) (frame-edges nil 'outer-edges)))
+          (and (eq 0 (call-process "screencapture" nil nil nil "-x" "-o"
+                                   (format "-R%d,%d,%d,%d" left top
+                                           (- right left) (- bottom top))
+                                   out))
+               (ps/screenshot--round-corners out))))))
+
+(defun ps/screenshot--round-corners (file)
+  "Make the corners of FILE transparent, the way a window capture leaves them."
+  (let ((r (number-to-string (* 2 ps/screenshot-corner-radius))))
+    (eq 0 (call-process
+           "magick" nil nil nil file
+           "(" "+clone" "-alpha" "extract" "-fill" "black" "-colorize" "100"
+           "-fill" "white" "-draw"
+           (format "roundrectangle 0,0,%%[fx:w-1],%%[fx:h-1],%s,%s" r r) ")"
+           "-alpha" "off" "-compose" "CopyOpacity" "-composite" file))))
+
 (defun ps/screenshot-frame (name)
   "Save the selected frame as NAME.png in `ps/screenshot-directory'."
   (interactive "sPicture name: ")
   (let ((out (expand-file-name (concat (file-name-sans-extension name) ".png")
                                ps/screenshot-directory)))
     (make-directory ps/screenshot-directory t)
-    ;; `screencapture -R' grabs whatever is on top at those coordinates, so
-    ;; this Emacs must be frontmost, not merely raised.
     (raise-frame)
     (call-process "osascript" nil nil nil "-e"
                   (format "tell application \"System Events\" to set frontmost of (first process whose unix id is %d) to true"
@@ -71,18 +105,81 @@
     (message nil)
     (sit-for 0.5)
     (redisplay t)
-    (pcase-let ((`(,left ,top ,right ,bottom) (frame-edges nil 'outer-edges)))
-      (unless (eq 0 (call-process "screencapture" nil nil nil "-x" "-o"
-                                  (format "-R%d,%d,%d,%d" left top (- right left) (- bottom top)) out))
-        (user-error "screencapture failed for %s" out)))
+    (unless (ps/screenshot--capture out)
+      (user-error "screencapture failed for %s" out))
     (call-process "sips" nil nil nil "-Z" (number-to-string ps/screenshot-width) out)
     (call-process "pngquant" nil nil nil "--force" "--skip-if-larger"
                   "--output" out "256" out)
     (message "Saved %s" out)
     out))
 
-;; The pictures show the sample notes, never a sync in progress.
+;;; Diffs
+
+(defun ps/screenshot--ediff-control ()
+  "The control buffer of the live Ediff session, or nil."
+  (seq-find (lambda (b) (eq (buffer-local-value 'major-mode b) 'ediff-mode))
+            (buffer-list)))
+
+(defun ps/screenshot-hide-ediff-control ()
+  "Close the Ediff control window; the session itself stays alive."
+  (interactive)
+  (when-let* ((ctl (ps/screenshot--ediff-control))
+              (w (get-buffer-window ctl)))
+    (delete-window w)))
+
+(defun ps/screenshot-inline-diff ()
+  "Show the live Ediff session inline, in its B (proposed) buffer alone.
+Each difference's old text is drawn plain and struck through, on its own
+unnumbered line just before the new text, which is highlighted; the A and
+control windows are closed.  Run it again after a change to redraw."
+  (interactive)
+  (let ((ctl (or (ps/screenshot--ediff-control) (user-error "No Ediff session"))))
+    (with-current-buffer ctl
+      (let ((buf-a ediff-buffer-A) (buf-b ediff-buffer-B))
+        (with-current-buffer buf-b
+          (remove-overlays (point-min) (point-max) 'ps/screenshot t))
+        (dotimes (n ediff-number-of-differences)
+          (let* ((old (with-current-buffer buf-a
+                        (buffer-substring-no-properties
+                         (ediff-get-diff-posn 'A 'beg n ctl)
+                         (ediff-get-diff-posn 'A 'end n ctl))))
+                 (beg (ediff-get-diff-posn 'B 'beg n ctl))
+                 (end (ediff-get-diff-posn 'B 'end n ctl))
+                 (new (make-overlay beg end buf-b)))
+            (overlay-put new 'ps/screenshot t)
+            (overlay-put new 'priority 1000)
+            (overlay-put new 'face 'diff-added)
+            (unless (string-empty-p old)
+              ;; Hung off the end of the line before, so it reads as an
+              ;; inserted line without taking that line's number.
+              (let ((ov (make-overlay (max (point-min) (1- beg)) (max (point-min) (1- beg)) buf-b)))
+                (overlay-put ov 'ps/screenshot t)
+                (overlay-put ov 'after-string
+                             (concat "\n" (propertize (string-trim-right old "\n")
+                                                       'face '(:inherit diff-removed :strike-through t))))))))
+        (when-let ((w (get-buffer-window buf-a))) (delete-window w))))
+    (ps/screenshot-hide-ediff-control)))
+
+;;; This session only
+
+;; The pictures show the sample notes, never a sync in progress -- and no sync
+;; label either, which in a picture only raises a question.
 (setq ps/git-sync-paused t)
+(advice-add 'ps/git-sync--modeline :override (lambda () ""))
+(setq-default ediff-brief-help-message-function (lambda () ""))
+;; Real words the typo checker does not know yet; an underline on them would
+;; read as a mistake in the picture.
+(setq-default jinx-local-words "agentic Agentic tokenizer quantized")
+
+;; The scratch folder holding the notes and the inbox stands in for the home
+;; directory in the mode line, the way the real ones would read.  Display
+;; only: file names are untouched, so nothing can reach the real home.
+(let ((scratch (file-name-directory (directory-file-name my-org-base-directory))))
+  (advice-add 'ps/mode-line--identity :filter-return
+              (lambda (label)
+                (if (string-prefix-p scratch label)
+                    (concat "~/" (substring label (length scratch)))
+                  label))))
 
 ;; The capture-inbox fixture is copied beside the notes by the vault script.
 (let ((queue (expand-file-name "../info-triage-inbox/info/" my-org-base-directory)))

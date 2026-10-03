@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "requested_url": "https://github.com/rasbt/mini-coding-agent",
+  "status": "complete",
+  "attempts": [
+    {
+      "method": "http",
+      "result": "fetched"
+    }
+  ],
+  "final_url": "https://github.com/rasbt/mini-coding-agent",
+  "kind": "html",
+  "markdown_chars": 5982,
+  "markdown_words": 823
+}

@@ -1,0 +1,7 @@
+{
+  "message_id": 5,
+  "date": 1787063184,
+  "text": "https://github.com/rasbt/mini-coding-agent\n\nMinimal and readable coding agent harness implementation in Python to explain the core components of coding agents.",
+  "entities": [],
+  "source": "chrome-extension"
+}

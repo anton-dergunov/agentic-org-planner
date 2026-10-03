@@ -1,0 +1,88 @@
+{
+  "source_url": "https://www.instagram.com/p/Db7LAAAiU4Y/?img_index=8&igsi=MW51OGx1c2dqa2J6eg%3D%3D",
+  "canonical_url": "https://www.instagram.com/p/Db7LAAAiU4Y/",
+  "shortcode": "Db7LAAAiU4Y",
+  "media_id": 3961808675723103768,
+  "type": "GraphSidecar",
+  "media_count": 10,
+  "owner": {
+    "username": "techwith.ram",
+    "id": 66847293215
+  },
+  "created_at_utc": "2026-08-12T03:13:39",
+  "caption": "RAG vs CAG vs MAG\n\nThe interesting part isn't choosing the \"best\" architecture.\n\nIt's choosing the right architecture for the workload.\n\nData changes frequently? → RAG\nData is stable + speed is critical? → CAG\nAgents need persistent, evolving state? → MAG\n\nI put together a complete breakdown of RAG vs CAG vs MAG, including architecture, latency, scalability, infrastructure, and real-world use cases.\n\nSave this for your next AI architecture discussion. 🚀",
+  "accessibility_caption": null,
+  "title": null,
+  "hashtags": [],
+  "mentions": [],
+  "tagged_users": [],
+  "likes_count": 2715,
+  "comments_count": 44,
+  "is_video": false,
+  "video_duration_seconds": null,
+  "video_play_count": null,
+  "video_view_count": null,
+  "location": null,
+  "media": [
+    {
+      "index": 1,
+      "is_video": false,
+      "thumbnail_url": null,
+      "file": "raw/media/01_image.jpg"
+    },
+    {
+      "index": 2,
+      "is_video": false,
+      "thumbnail_url": null,
+      "file": "raw/media/02_image.jpg"
+    },
+    {
+      "index": 3,
+      "is_video": false,
+      "thumbnail_url": null,
+      "file": "raw/media/03_image.jpg"
+    },
+    {
+      "index": 4,
+      "is_video": false,
+      "thumbnail_url": null,
+      "file": "raw/media/04_image.jpg"
+    },
+    {
+      "index": 5,
+      "is_video": false,
+      "thumbnail_url": null,
+      "file": "raw/media/05_image.jpg"
+    },
+    {
+      "index": 6,
+      "is_video": false,
+      "thumbnail_url": null,
+      "file": "raw/media/06_image.jpg"
+    },
+    {
+      "index": 7,
+      "is_video": false,
+      "thumbnail_url": null,
+      "file": "raw/media/07_image.jpg"
+    },
+    {
+      "index": 8,
+      "is_video": false,
+      "thumbnail_url": null,
+      "file": "raw/media/08_image.jpg"
+    },
+    {
+      "index": 9,
+      "is_video": false,
+      "thumbnail_url": null,
+      "file": "raw/media/09_image.jpg"
+    },
+    {
+      "index": 10,
+      "is_video": false,
+      "thumbnail_url": null,
+      "file": "raw/media/10_image.jpg"
+    }
+  ]
+}

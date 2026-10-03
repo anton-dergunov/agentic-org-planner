@@ -256,36 +256,48 @@ is before the first grid entry, so the now-line belongs at the bottom."
       (and (not (org-get-at-bol 'org-marker))
            (string-match-p "now" (buffer-substring-no-properties bol eol)))))
 
-(defun ps/schedule-view--now-line-str (hhmm win-cols)
+(defun ps/schedule-view--dash-cols ()
+  "Width of the now-line's ┄, in columns of the default font.
+The dash is usually drawn from a fallback font, so it is rarely exactly one
+column wide; 1.0 when it cannot be measured."
+  (let ((dash (string-pixel-width
+               (propertize "┄" 'face 'ps/schedule-view-grid)))
+        (col (default-font-width)))
+    (if (and (> dash 0) (> col 0)) (/ (float dash) col) 1.0)))
+
+(defun ps/schedule-view--now-line-str (hhmm win-cols &optional dash-cols)
   "Full-width now-line string for HHMM with window width WIN-COLS.
-Starts with `ps/agenda-layout-left-margin-cols' spaces so it aligns with
-item and grid lines.  The `now · HH:MM' label is centred across the full
-usable width.  ┆ is fixed at column (left-margin + time-col-width + 1)
-within the string.  Dashes and bar in `ps/schedule-view-grid' face;
-label in `ps/schedule-view-now' face."
-  (let* ((left        (ps/schedule-view--left-cols))
-         (margin      (make-string left ?\s))
+Starts with the schedule's left margin so it aligns with item and grid lines.
+The `now · HH:MM' label is centred across the usable width, and ┆ sits at
+`ps/schedule-view--bar-col', like every row's bar.  DASH-COLS is the width of
+one ┄ in columns (see `ps/schedule-view--dash-cols'; default 1.0).
+
+The ┆ and the label are placed with `:align-to' rather than by counting
+dashes: the dash comes from a fallback font whose width is not a column, so a
+counted run drifts away from the rows' bar.  Each run is sized to end just
+short of its anchor.  Dashes and bar in `ps/schedule-view-grid' face; label in
+`ps/schedule-view-now' face."
+  (let* ((dash-cols   (or dash-cols 1.0))
+         (left        (ps/schedule-view--left-cols))
          ;; Indent on the left and pull the right edge in by the extra margin too.
          (usable      (- win-cols left ps/schedule-view-extra-margin-cols))
-         ;; ┆ lands at usable-col = time-col-width + 1 = 12
+         ;; Both relative to the margin; ┆ lands at time-col-width + 1 = 12.
          (bar-col     (1+ ps/schedule-view--time-col-width))
          (label       (format " now · %s " (ps/schedule-view--fmt-tod hhmm)))
          (label-w     (string-width label))
-         (total-fill  (max 0 (- usable label-w)))
-         (left-fill   (/ total-fill 2))
-         (right-fill  (- total-fill left-fill))
-         ;; bar-col dashes left of ┆, then mid-fill dashes right of ┆ before label
-         (left-dashes  (make-string bar-col ?┄))
-         (mid-fill    (max 0 (- left-fill (1+ bar-col))))
-         (mid-dashes  (make-string mid-fill ?┄))
-         (right-dashes (make-string (max 0 right-fill) ?┄)))
+         (label-col   (max (1+ bar-col) (/ (max 0 (- usable label-w)) 2)))
+         (dashes      (lambda (cols)
+                        (propertize (make-string (max 0 (floor cols dash-cols)) ?┄)
+                                    'face 'ps/schedule-view-grid))))
     (concat
-     margin
-     (propertize left-dashes  'face 'ps/schedule-view-grid)
-     (propertize "┆"          'face 'ps/schedule-view-grid)
-     (propertize mid-dashes   'face 'ps/schedule-view-grid)
-     (propertize label        'face 'ps/schedule-view-now)
-     (propertize right-dashes 'face 'ps/schedule-view-grid))))
+     (make-string left ?\s)
+     (funcall dashes bar-col)
+     (ps/agenda-layout--space-to (+ left bar-col))
+     (propertize "┆" 'face 'ps/schedule-view-grid)
+     (funcall dashes (- label-col bar-col 1))
+     (ps/agenda-layout--space-to (+ left label-col))
+     (propertize label 'face 'ps/schedule-view-now)
+     (funcall dashes (- usable label-col label-w)))))
 
 ;;; Item body rendering
 
@@ -465,6 +477,7 @@ layout overlays (the hidden day header, the blank line under the control row)."
             (ps/agenda-layout--scope-has-priority-p t))
            (cols     (ps/schedule-view--cols))
            (win-cols (ps/agenda-layout--window-cols))
+           (dash-cols (ps/schedule-view--dash-cols))
            (style    ps/schedule-view-style)
            (header   "")
            items)
@@ -551,11 +564,11 @@ layout overlays (the hidden day header, the blank line under the control row)."
                             (progn
                               (ps/agenda-layout--hide-line bol eol)
                               (setq now-bottom-str
-                                    (ps/schedule-view--now-line-str now-hhmm win-cols)))
+                                    (ps/schedule-view--now-line-str now-hhmm win-cols dash-cols)))
                           (progn
                             (ps/agenda-layout--replace-line
                              bol eol
-                             (ps/schedule-view--now-line-str now-hhmm win-cols))
+                             (ps/schedule-view--now-line-str now-hhmm win-cols dash-cols))
                             (setq last-vis-eol (point))))))
                      ;; Grid tick: shown in timeline mode, hidden in events mode.
                      ((eq style 'timeline)

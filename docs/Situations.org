@@ -36,7 +36,7 @@ while writing a task.
 You never tag a task with a situation. Situations are searches over the tags, so
 adding a new one costs one line and no re-tagging.
 
-#+CAPTION: The "A spare minute" situation
+#+CAPTION: The "A spare minute" situation, with its switcher open and one task shown below
 [[file:../screenshots/situations.png]]
 
 * Opening a situation

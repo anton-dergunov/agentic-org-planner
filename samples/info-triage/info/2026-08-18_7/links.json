@@ -1,0 +1,38 @@
+{
+  "links": [
+    {
+      "n": 1,
+      "raw": "https://www.linkedin.com/posts/maxime-labonne_how-to-steal-reasoning-without-reasoning-share-7493580874224152576-kiKE/",
+      "canonical": "https://www.linkedin.com/posts/maxime-labonne_how-to-steal-reasoning-without-reasoning-share-7493580874224152576-kiKE/",
+      "handler": "linkedin",
+      "identity": "7493580874224152576",
+      "priority": 2,
+      "status": "resolved",
+      "extraction": "complete",
+      "from_segment": null,
+      "label": null,
+      "title": "🥷 How to Steal Reasoning Without Reasoning Traces Reasoning models keep their internal traces private and return only a final answer with a short summary. That is meant to stop competitors from… | Maxime Labonne | 19 comments",
+      "reason": null,
+      "origin": "body",
+      "duplicate_of": null,
+      "via": null
+    },
+    {
+      "n": 2,
+      "raw": "https://arxiv.org/abs/2603.07267",
+      "canonical": "https://arxiv.org/abs/2603.07267",
+      "handler": "research",
+      "identity": "arxiv:2603.07267",
+      "priority": 1,
+      "status": "harvested",
+      "extraction": "complete",
+      "from_segment": null,
+      "label": null,
+      "title": "How to Steal Reasoning Without Reasoning Traces",
+      "reason": null,
+      "origin": "harvest",
+      "duplicate_of": null,
+      "via": "author comment"
+    }
+  ]
+}

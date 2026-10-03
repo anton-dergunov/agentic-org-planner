@@ -1,0 +1,17 @@
+{
+  "origin_route": "info",
+  "chat_id": 1234567890,
+  "message_id": 238,
+  "route": "info",
+  "local_id": 84,
+  "received_at": "2026-09-24T08:14:28+00:00",
+  "edited_at": null,
+  "category": "Other",
+  "revision": 1,
+  "media_group_id": null,
+  "source_message_ids": [
+    238
+  ],
+  "attachments": [],
+  "download_warnings": []
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "status": "complete",
+  "provider": "arxiv",
+  "paper_id": "2603.07267",
+  "requested_url": "https://arxiv.org/abs/2603.07267",
+  "attempts": [
+    {
+      "stage": "metadata",
+      "url": "https://arxiv.org/abs/2603.07267",
+      "method": "http",
+      "result": "complete"
+    },
+    {
+      "stage": "pdf-archive",
+      "url": "https://arxiv.org/pdf/2603.07267",
+      "method": "http",
+      "result": "complete"
+    },
+    {
+      "stage": "body",
+      "url": "https://arxiv.org/html/2603.07267",
+      "method": "http",
+      "format": "html",
+      "result": "complete"
+    }
+  ],
+  "markdown_chars": 46434,
+  "markdown_words": 6384
+}

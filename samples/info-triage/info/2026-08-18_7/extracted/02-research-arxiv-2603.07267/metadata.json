@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "kind": "research",
+  "provider": "arxiv",
+  "paper_id": "2603.07267",
+  "requested_url": "https://arxiv.org/abs/2603.07267",
+  "canonical_url": "https://arxiv.org/abs/2603.07267",
+  "title": "How to Steal Reasoning Without Reasoning Traces",
+  "authors": [
+    "Tingwei Zhang",
+    "John X. Morris",
+    "Vitaly Shmatikov"
+  ],
+  "abstract": "Many large language models (LLMs) use reasoning to generate responses but do not reveal their full reasoning traces (a.k.a. chains of thought), instead outputting only final answers and brief reasoning summaries. To demonstrate that hiding reasoning traces does not prevent users from \"stealing\" a model's reasoning capabilities, we introduce trace inversion models that, given only the inputs, answers, and (optionally) reasoning summaries exposed by a target model, generate detailed, synthetic reasoning traces. We show that (1) traces synthesized by trace inversion have high overlap with the ground-truth reasoning traces (when available), and (2) fine-tuning student models on inverted traces substantially improves their reasoning and enables distillation from proprietary, black-box LLMs.",
+  "submitted_at": "2026/03/07",
+  "published_at": null,
+  "updated_at": null,
+  "subjects": [
+    "Cryptography and Security (cs.CR)"
+  ],
+  "venue": null,
+  "doi": "10.48550/arXiv.2603.07267",
+  "volume": null,
+  "pages": null,
+  "publisher": null,
+  "license": "http://arxiv.org/licenses/nonexclusive-distrib/1.0/",
+  "pdf_url": "https://arxiv.org/pdf/2603.07267",
+  "provider_metadata": {
+    "submission_history": "Submission history From: Tingwei Zhang [ view email ] [v1] Sat, 7 Mar 2026 15:50:44 UTC (516 KB) [v2] Tue, 12 May 2026 18:36:11 UTC (501 KB)",
+    "subjects": "Cryptography and Security (cs.CR)"
+  },
+  "body_url": "https://arxiv.org/html/2603.07267",
+  "body_format": "html",
+  "body_fetch_method": "http",
+  "pdf_archived": true,
+  "archived_pdf_url": "https://arxiv.org/pdf/2603.07267"
+}

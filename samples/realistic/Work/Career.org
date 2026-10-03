@@ -4,37 +4,21 @@
 * Career Vision
 ** TODO [#A] Define long-term specialization strategy        :career:planning:
 SCHEDULED: <2026-05-21 Thu>
-Possible directions:
+Choose between:
 - ML infrastructure
 - Applied AI systems
-- Research engineering
-- Technical leadership
 - *Agentic systems* — the strongest fit so far
-
-Need to optimize for:
-- long-term learning,
-- interesting technical challenges,
-- healthy work environment,
-- strong engineering culture.
+Optimize for learning, hard technical problems and a strong engineering culture.
 Decide by the /end of the quarter/; background in [[obsidian:Career strategy]].
 ** TODO [#B] Create yearly career review template
+DEADLINE: <2026-06-01 Mon>
 - [X] Collect last year's review notes
 - [ ] Draft the questions
 - [ ] Try it on the 2025 review in =Vision/2025.org=
-
-DEADLINE: <2026-06-01 Mon>
 ** INPR Map current strengths and weaknesses          :reflection:think:
 Started: [2026-05-12 Tue]
-Strengths:
-- debugging complex systems
-- structured thinking
-- fast prototyping
-- communication with technical teams
-
-Weaknesses:
-- saying yes to too many projects
-- insufficient delegation
-- over-optimization of tooling
+- Strengths :: debugging complex systems, structured thinking, fast prototyping
+- Weaknesses :: saying yes to too many projects, over-optimizing my tooling
 
 * Technical Skills
 ** Machine Learning
@@ -123,7 +107,6 @@ SCHEDULED: <2026-05-21 Thu +1w>
 
 * Career Experiments
 ** TODO Explore open-source contribution strategy
-
 ** TODO Build public portfolio projects
 ** TODO Create technical demo repository
 ** Side Projects
@@ -161,7 +144,6 @@ SCHEDULED: <2026-05-21 Thu +1w>
 * Collaboration
 ** TODO Improve code review quality
 ** TODO Practice clearer async communication
-
 ** TODO Learn conflict resolution techniques
 
 * Architecture Notes
@@ -255,7 +237,6 @@ SCHEDULED: <2026-05-21 Thu 11:00-12:30>
 SCHEDULED: <2026-05-21 Thu 20:00-21:30>
 
 * Mixed States
-
 ** DONE Old completed initiative
 CLOSED: [2026-04-10 Fri]
 *** DONE Subtask one
@@ -282,7 +263,6 @@ Examples:
 
 * Priorities
 ** TODO [#A] Prepare for systems interview
-
 ** TODO [#B] Finish statistics refresher
 ** TODO [#C] Reorganize old learning notes
 

@@ -1,0 +1,21 @@
+{
+  "links": [
+    {
+      "n": 1,
+      "raw": "https://www.instagram.com/reel/Dc8d-JMN21a/?stkn=MWJ1NnVuMjRiMmF4Yw==",
+      "canonical": "https://www.instagram.com/reel/Dc8d-JMN21a/?stkn=MWJ1NnVuMjRiMmF4Yw%3D%3D",
+      "handler": "instagram",
+      "identity": "Dc8d-JMN21a",
+      "priority": 2,
+      "status": "resolved",
+      "extraction": "complete",
+      "from_segment": 1,
+      "label": null,
+      "title": "Olga • Travel & UGC • Austria (@mshelga) • Instagram reel",
+      "reason": null,
+      "origin": "entity",
+      "duplicate_of": null,
+      "via": null
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "source_url": "https://www.linkedin.com/posts/sebastianraschka_just-saw-that-the-llms-from-scratch-repository-share-7491503037501333504-0Lvv/",
+  "request_url": "https://www.linkedin.com/posts/sebastianraschka_just-saw-that-the-llms-from-scratch-repository-share-7491503037501333504-0Lvv/",
+  "canonical_url": "https://www.linkedin.com/posts/sebastianraschka_just-saw-that-the-llms-from-scratch-repository-share-7491503037501333504-0Lvv/",
+  "post_id": "7491503037501333504",
+  "activity_urn": "urn:li:activity:7491503038625599488",
+  "attributed_urn": "urn:li:share:7491503037501333504",
+  "featured_activity_urn": "urn:li:activity:7491503038625599488",
+  "author": {
+    "name": "Sebastian Raschka, PhD",
+    "url": "https://www.linkedin.com/in/sebastianraschka"
+  },
+  "resharer": null,
+  "published_at": "2026-08-07T14:38:29.783Z",
+  "relative_time": "1w",
+  "headline": "Just saw that the LLMs-from-scratch repository passed 100,000 stars on GitHub!",
+  "text": "Just saw that the LLMs-from-scratch repository passed 100,000 stars on GitHub!\nThis is super cool and motivating. I am really happy to see that this open-source repo has helped so many people.\nThanks also to everyone who shared ideas and opened PRs with improvements!\n\nOf course, I plan to keep adding new material, including new attention variants and architectures (while bigger projects like RL and Reasoning From Scratch live in their separate repositories).\n\nI am also currently working on a larger applied custom “small” LLM project. It has been keeping me super busy this month, but I will share more on that soon.\n\nIf you are new to it, some of the highlights include\n\n1. Of course, the complete code path from tokenization and attention to pretraining, classification, and instruction fine-tuning, etc. All of it FROM SCRATCH, of course! (RL lives in a companion repo.)\n\n2. From-scratch implementations of Llama, Qwen, Gemma, and Olmo (smaller variants that run locally and can be plugged into the training scripts).\n\n3. From-scratch implementations of attention alternatives and other architecture components, such as GQA, MLA, sliding-window attention, Gated DeltaNet, DeepSeek Sparse Attention, cross-layer KV sharing, and mixture-of-experts\n\n4. Materials on KV caching, training performance, memory-efficient weight loading, DPO, evaluation, and LoRA\n\nSo, if you don’t have any weekend plans yet, happy tinkering!",
+  "content_type": "image",
+  "reaction_count": 2002,
+  "reported_comment_count": 68,
+  "public_comment_count": 10,
+  "links": [],
+  "media": [
+    {
+      "url": "https://media.licdn.com/dms/image/v2/D5622AQECSgWt4KNXAA/feedshare-image-high-res/B56Z_cqT1iK8AU-/0/1786113508626?e=2147483647&v=beta&t=ud6I3Yc5I9K2IiOqdYe9oVTEo8R2cxY9CpPHT3Dg1S0",
+      "alt_text": "diagram",
+      "kind": "post_image",
+      "file": "raw/media/01_image.jpg"
+    }
+  ],
+  "extraction_sources": {
+    "post_text": "semantic_html",
+    "metadata": "json_ld+semantic_html",
+    "comments": "anonymous_public_selection"
+  }
+}

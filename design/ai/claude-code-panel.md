@@ -12,7 +12,7 @@ backend; settings block `** Claude Code (ps-claude.el)`; package setup in
 [agent-context.md](agent-context.md); why this replaced an in-Emacs LLM client
 is in [in-emacs-llm.md](in-emacs-llm.md).
 
-The Commentary of `ps-claude.el` records each fix in detail, numbered 1 to 13.
+The Commentary of `ps-claude.el` records each fix in detail, numbered 1 to 14.
 This note keeps the reasons that span modules and the lessons that are not
 visible in the code.
 
@@ -84,6 +84,16 @@ height-only changes after eat has already resized its own model, so the
 process from `eat-term-size` once a resize settles, and repaints at once.
 During a divider drag, reflows are throttled.
 
+**A resize Claude never heard about ends in a repaint.** Claude runs on the
+alternate screen (`CLAUDE_CODE_NO_FLICKER`) and repaints only the cells it
+believes changed. A popup that briefly shrinks the panel (which-key, recorded
+live: 54 rows to 40 and back in 26 ms) makes eat cut its grid, dropping the
+bottom rows, while the size Claude is told ends where it started, so no
+SIGWINCH goes out and those rows stay blank for good. eat's grid resizes and
+the last size told to the process are both noted; a resync that ends with the
+grid resized and the told size unchanged sends C-l, Claude's redraw key. Not on
+the normal screen, where C-l would clear the scrollback.
+
 **Quitting does not ask about the session.** The terminal, the MCP listener and
 every accepted MCP connection all have query-on-exit flags; they are cleared
 just before exit (`ps/claude-no-exit-prompt`).
@@ -115,6 +125,15 @@ loop. It was not pinned to a trigger before the diagnostic logging was removed;
 it looked worse after sleep and wake. What remains is
 `ps/claude--eat-output-guard`, which swallows a transient `args-out-of-range`
 from eat and schedules a resync.
+
+**Record the stream before guessing.** The lost-rows bug left no trace in
+its end state: eat's parser was idle and nothing was queued. Logging every
+output chunk, input, eat resize and process size, then replaying the log
+through eat in batch and through xterm's headless emulator, reproduced the
+broken screen exactly and pointed at the untold resize, not at eat's
+emulation. A live check needs a popup in a *side window showing another
+buffer*: a split showing the session buffer itself takes a different path
+(eat sizes to the smallest window and tells the process) and never fails.
 
 **Keep forced work out of the hot output path.** A forced `eat-term-resize` or
 redisplay while output is flowing brings back the "content fills only the top

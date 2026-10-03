@@ -755,6 +755,105 @@ fire at all."
       (kill-buffer buf)
       (should-not (ps/claude--resend-target)))))
 
+;;; Repaint after a resize Claude was never told about (fix #14)
+
+(defmacro ps/claude-test--with-session (&rest body)
+  "Run BODY in a fake session buffer with a fake eat terminal.
+Binds `proc' (a pipe process owned by the buffer), `size' (the fake
+terminal's size, a cons that `eat-term-resize' updates), `alt' (whether it
+is on the alternate screen) and `sent' (strings sent to the terminal)."
+  (declare (indent 0))
+  `(let* ((buf (generate-new-buffer "*claude-code[test]*"))
+          (proc (make-pipe-process :name "ps-claude-test" :buffer buf :noquery t))
+          (size (cons 90 54)) (alt t) (sent nil))
+     (unwind-protect
+         (with-current-buffer buf
+           (setq-local eat-terminal 'fake-terminal)
+           (cl-letf (((symbol-function 'eat-term-size) (lambda (_) size))
+                     ((symbol-function 'eat-term-in-alternative-display-p)
+                      (lambda (_) alt))
+                     ((symbol-function 'eat-term-send-string)
+                      (lambda (_ string) (push string sent))))
+             ,@body))
+       (delete-process proc)
+       (kill-buffer buf))))
+
+(defmacro ps/claude-test--grid-resize (w h)
+  "Resize the fake grid to W x H, running the advice first as eat would.
+A macro so that `size' is the binding of `ps/claude-test--with-session'."
+  `(progn (ps/claude--note-grid-resize 'fake-terminal ,w ,h)
+          (setq size (cons ,w ,h))))
+
+(ert-deftest ps/claude-test-grid-resize-noted-only-on-change ()
+  "A resize to the current size is not a change."
+  (ps/claude-test--with-session
+    (ps/claude--note-grid-resize 'fake-terminal 90 54)
+    (should-not ps/claude--grid-resized)
+    (ps/claude--note-grid-resize 'fake-terminal 90 40)
+    (should ps/claude--grid-resized)))
+
+(ert-deftest ps/claude-test-grid-resize-ignored-outside-sessions ()
+  "Ordinary eat buffers are left alone."
+  (with-temp-buffer
+    (cl-letf (((symbol-function 'eat-term-size) (lambda (_) '(80 . 24))))
+      (ps/claude--note-grid-resize 'fake-terminal 80 10)
+      (should-not ps/claude--grid-resized))))
+
+(ert-deftest ps/claude-test-new-told-size-clears-the-need ()
+  "Telling the process a new size sends SIGWINCH, so no repaint is owed."
+  (ps/claude-test--with-session
+    (ps/claude--note-told-size proc 54 90)
+    (ps/claude-test--grid-resize 90 40)
+    (ps/claude--note-told-size proc 40 90)
+    (should-not ps/claude--grid-resized)
+    (ps/claude--repaint-if-stale)
+    (should-not sent)))
+
+(ert-deftest ps/claude-test-recorded-shrink-and-regrow-repaints ()
+  "The recorded failure: told 54, grid 54 -> 40 -> 54 untold, then told 54
+again.  No SIGWINCH goes out, so Claude must be sent C-l -- once."
+  (ps/claude-test--with-session
+    (ps/claude--note-told-size proc 54 90)
+    (ps/claude-test--grid-resize 90 40)
+    (ps/claude-test--grid-resize 90 54)
+    (should (equal size '(90 . 54)))
+    (ps/claude--note-told-size proc 54 90)
+    (should ps/claude--grid-resized)
+    (ps/claude--repaint-if-stale)
+    (should (equal sent '("\f")))
+    (ps/claude--repaint-if-stale)
+    (should (equal sent '("\f")))))
+
+(ert-deftest ps/claude-test-unknown-told-size-still-repaints ()
+  "With no size on record, a resized grid is repainted rather than trusted
+to a SIGWINCH that may not have gone out."
+  (ps/claude-test--with-session
+    (ps/claude-test--grid-resize 90 40)
+    (ps/claude-test--grid-resize 90 54)
+    (ps/claude--note-told-size proc 54 90)
+    (ps/claude--repaint-if-stale)
+    (should (equal sent '("\f")))))
+
+(ert-deftest ps/claude-test-no-repaint-on-the-normal-screen ()
+  "On the normal screen C-l would clear the scrollback, so it is not sent;
+the need is still cleared."
+  (ps/claude-test--with-session
+    (setq alt nil)
+    (ps/claude--note-told-size proc 54 90)
+    (ps/claude-test--grid-resize 90 40)
+    (ps/claude-test--grid-resize 90 54)
+    (ps/claude--repaint-if-stale)
+    (should-not sent)
+    (should-not ps/claude--grid-resized)))
+
+(ert-deftest ps/claude-test-no-repaint-without-a-grid-resize ()
+  "A resync that resized nothing sends nothing."
+  (ps/claude-test--with-session
+    (ps/claude--note-told-size proc 54 90)
+    (ps/claude--note-told-size proc 54 90)
+    (ps/claude--repaint-if-stale)
+    (should-not sent)))
+
 ;;; Escape sends one Escape (fix #13)
 
 (ert-deftest ps/claude-test-escape-key-bound-in-session-buffer ()

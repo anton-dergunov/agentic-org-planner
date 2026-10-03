@@ -93,7 +93,8 @@ Emacs knows its scroll position:
 - `point-max` moves non-monotonically with the size of each redraw; the cursor
   follows it.
 - eat's internal structures have no scroll position.
-- `CLAUDE_CODE_NO_FLICKER` does not change the rendering model.
+- `CLAUDE_CODE_NO_FLICKER` moves Claude to the alternate screen, which has no
+  scrollback either, so it adds nothing to read a position from.
 - eat's line mode moves `window-start`, but the buffer holds one screen; the
   conversation lives in Claude Code's own memory.
 

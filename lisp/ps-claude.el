@@ -198,6 +198,29 @@
 ;;     so Meta chords and `C-[' still work; and it is a minor mode enabled
 ;;     only in session buffers, not a binding in eat's keymaps, which every
 ;;     eat shell shares.  (`claude-code-ide's own `C-<escape>' still works.)
+;;
+;; 14. A brief change in the panel's height wiped part of the screen for good.
+;;     Recorded live: pressing Escape (the Meta prefix, before #13) made
+;;     which-key pop up a hint window, the panel shrank from 54 rows to 40 and
+;;     regrew 26 ms later.  eat resized its grid both times, and on the
+;;     alternate screen -- where Claude draws when `CLAUDE_CODE_NO_FLICKER' is
+;;     set -- a shrink simply drops the bottom rows, here the prompt box.  The
+;;     package's reflow filter (see #2) withheld the height-only change from
+;;     the process, and by the time the resync ran the size was back to 54:
+;;     what Claude had been told all along, so the kernel sent no SIGWINCH and
+;;     Claude, which repaints only the cells it believes changed, never drew
+;;     those rows again.  Replaying the recording through eat reproduced the
+;;     broken screen exactly; eat's emulation is not at fault -- any terminal
+;;     loses rows it is shrunk past.  So eat's grid resizes are noted
+;;     (`ps/claude--note-grid-resize'), so is the size the process was last
+;;     told (`ps/claude--note-told-size'), and when a resync ends with the
+;;     grid resized but the told size unchanged, Claude is sent C-l, its
+;;     redraw key, which repaints the whole screen and keeps the prompt's
+;;     text.  Only on the alternate screen: on the normal one C-l clears the
+;;     scrollback, and eat keeps the rows a shrink pushes off the top there.
+;;     Telling the process every height change immediately would not do: a
+;;     shrink and regrow 26 ms apart can reach Node as a single SIGWINCH, and
+;;     Node drops one that reports the size it already had.
 
 ;;; Code:
 
@@ -224,6 +247,7 @@
 (declare-function claude-code-ide--terminal-position-keeper "claude-code-ide")
 (declare-function eat-yank "eat")
 (declare-function eat-term-send-string "eat")
+(declare-function eat-term-in-alternative-display-p "eat")
 (defvar claude-code-ide-window-width)
 (defvar claude-code-ide-window-side)
 (defvar my-org-base-directory)
@@ -452,6 +476,53 @@ position was, showing an empty pane is never what they wanted."
                               "[^ \t\n\r\f]"
                               (buffer-substring-no-properties from to))))))))))))
 
+;;; Repaint after a resize Claude was never told about (fix #14)
+
+(defvar-local ps/claude--told-size nil
+  "The (WIDTH . HEIGHT) this buffer's process was last told, or nil.")
+
+(defvar-local ps/claude--grid-resized nil
+  "Non-nil if eat's grid changed size since the process was told a new one.
+A told size that differs from the last makes Claude repaint by itself
+\(SIGWINCH); one that matches does not, which is when Claude's picture of
+the screen and eat's grid can disagree.")
+
+(defun ps/claude--note-grid-resize (terminal width height)
+  "Note a change in the size of eat's grid in a session buffer.
+`:before' advice on `eat-term-resize', called with TERMINAL, WIDTH and
+HEIGHT."
+  (when (and (ps/claude--session-buffer-p (current-buffer))
+             (fboundp 'eat-term-size)
+             (not (equal (eat-term-size terminal) (cons width height))))
+    (setq ps/claude--grid-resized t)))
+
+(defun ps/claude--note-told-size (process height width)
+  "Note the size PROCESS is told, HEIGHT rows by WIDTH columns.
+`:after' advice on `set-process-window-size'.  A size different from the
+last one sends SIGWINCH, and Claude repaints everything for it, so the
+grid no longer needs a repaint of ours.  With no last size on record it is
+unknown whether one went out, and the need stands: a repaint too many is
+harmless, one too few is the bug."
+  (let ((buffer (and (processp process) (process-buffer process))))
+    (when (and (buffer-live-p buffer) (ps/claude--session-buffer-p buffer))
+      (with-current-buffer buffer
+        (let ((size (cons width height)))
+          (when (and ps/claude--told-size
+                     (not (equal size ps/claude--told-size)))
+            (setq ps/claude--grid-resized nil))
+          (setq ps/claude--told-size size))))))
+
+(defun ps/claude--repaint-if-stale ()
+  "Make Claude repaint if eat's grid was resized behind its back.
+Called at the end of a resync, after the process has been told its size:
+if that told it nothing new, no SIGWINCH went out, so C-l (Claude's
+redraw key) is sent instead.  Only on the alternate screen; see fix #14."
+  (when ps/claude--grid-resized
+    (setq ps/claude--grid-resized nil)
+    (when (and (ps/claude--terminal-live-p)
+               (eat-term-in-alternative-display-p eat-terminal))
+      (eat-term-send-string eat-terminal "\f"))))
+
 (defun ps/claude--resync-window (window)
   "Bring WINDOW's eat terminal and the `claude' process to WINDOW's size.
 
@@ -480,7 +551,8 @@ done separately by `ps/claude--reanchor-window'."
                   (eat-term-resize eat-terminal width height))
                 (eat-term-redisplay eat-terminal)
                 (when proc
-                  (set-process-window-size proc height width)))
+                  (set-process-window-size proc height width))
+                (ps/claude--repaint-if-stale))
             (claude-code-ide--sync-terminal-dimensions buffer window)))))))
 
 (defun ps/claude--claude-windows ()
@@ -951,6 +1023,7 @@ is guarded by `ps/claude--session-buffer-p'."
   "Apply Claude Code IDE window-size, working-directory and reliability tweaks.
 Sets `claude-code-ide-window-width' from `ps/claude-window-width', installs
 the debounced resize-resync/re-anchor hook and the drag reflow throttle,
+makes Claude repaint after a resize it was never told about,
 pins the working directory and project key to `my-org-base-directory',
 keeps Claude told about the open file and the selected lines (see fix #10
 in the Commentary), silences the post-write \"Reread from disk?\" race for
@@ -986,6 +1059,8 @@ when Emacs quits.  Idempotent."
               :around #'ps/claude--eat-output-guard)
   (advice-add 'eat--adjust-process-window-size
               :around #'ps/claude--reflow-throttle-advice)
+  (advice-add 'eat-term-resize :before #'ps/claude--note-grid-resize)
+  (advice-add 'set-process-window-size :after #'ps/claude--note-told-size)
   (advice-add 'claude-code-ide--display-buffer-in-side-window
               :around #'ps/claude--adaptive-side-advice)
   (advice-add 'claude-code-ide--terminal-position-keeper

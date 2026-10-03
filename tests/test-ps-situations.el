@@ -4,6 +4,11 @@
 (add-to-list 'load-path "lisp")
 (require 'ps-situations)
 
+;; Declared special here so the `let'-bindings below reach the code under test:
+;; in the full suite another test file has loaded Org, which declares it
+;; globally, but run alone it would be bound lexically.
+(defvar org-tag-alist)
+
 ;;; -------------------------------------------------------
 ;;; context tags — normalization
 ;;; -------------------------------------------------------

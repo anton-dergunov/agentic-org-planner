@@ -5,6 +5,7 @@
 (add-to-list 'load-path "lisp")
 (require 'ps-file-tree)   ; provides ps/file-tree--normalize-display-name
 (require 'ps-claude)      ; provides ps/claude--session-buffer-p
+(require 'ps-situations)  ; provides ps/situations--menu-filter
 (require 'ps-mode-line)
 (require 'org)
 

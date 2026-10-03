@@ -5,6 +5,11 @@
 (add-to-list 'load-path "lisp")
 (require 'ps-window)
 
+;; Declared special here so the `let'-bindings below reach the code under test:
+;; in the full suite another test file has loaded Org, which declares it
+;; globally, but run alone it would be bound lexically.
+(defvar org-agenda-multi)
+
 ;; Window-parameter side effects: `window-side' does more than tag a single
 ;; window -- Emacs tracks side windows at the frame level, so a frame must
 ;; never be collapsed down to ONLY a side window (even transiently), and the

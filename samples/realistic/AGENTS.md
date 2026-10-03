@@ -3,7 +3,9 @@
 The general rules for working in these notes come with the Emacs configuration,
 in `.claude/generated-context.md`, imported at the end of this file. This file is
 for what is specific to you and these notes, and wins where the two differ.
-Emacs wrote it once, when the vault was created, and never changes it.
+Emacs wrote it once, when the vault was created, and never changes it. If the
+generated file is missing, Emacs has not run against this folder yet: discover
+the conventions from the existing headings.
 
 ## Language
 

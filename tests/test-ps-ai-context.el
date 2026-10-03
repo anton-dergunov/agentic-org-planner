@@ -8,9 +8,18 @@
 ;; marks the symbol special for the rest of *that* file -- it does not make
 ;; `let'-binding it dynamically visible from this file. Redeclaring it here
 ;; (mirroring tests/test-ps-claude.el and tests/test-ps-conflicts.el) is what
-;; makes the `let'-bindings below actually reach `ps/ai-context-sync'.
+;; makes the `let'-bindings below actually reach `ps/ai-context-sync'.  The
+;; Org variables need the same: in the full suite another test file has loaded
+;; Org, which declares them globally, but run alone they would be bound
+;; lexically and `ps/ai-context-sync' would see them void.
 (defvar my-org-base-directory)
 (defvar ps/info-triage-directory)
+(defvar org-todo-keywords)
+(defvar org-highest-priority)
+(defvar org-lowest-priority)
+(defvar org-log-done)
+(defvar org-tag-alist)
+(defvar org-tag-persistent-alist)
 
 ;;; Parsing org-todo-keywords
 

@@ -452,6 +452,41 @@ SCHEDULED: <%s>
 Everything in this folder is yours to rename, move or delete.
 " today)))
 
+(defun ps/vault--agents-template ()
+  "Return the text of a starter AGENTS.md, for the AI assistant.
+Only the personal half: the general rules for working in a vault are rendered
+into `.claude/generated-context.md' from the config (see ps-ai-context.el),
+which this file imports, so they stay current.  Written once; never touched
+again."
+  "# About these notes
+
+The general rules for working in these notes come with the Emacs configuration,
+in `.claude/generated-context.md`, imported at the end of this file. This file is
+for what is specific to you and these notes, and wins where the two differ.
+Emacs wrote it once, when the vault was created, and never changes it.
+
+## Language
+
+<!-- e.g. Write everything in English; titles of books and articles keep their
+original language. -->
+
+## Reference notes
+
+<!-- Where material worth finding again goes, e.g. My Obsidian vault is at
+~/obsidian; plan files link into it as [[obsidian:note name]]. -->
+
+## Files with special rules
+
+<!-- Reference data a file's charter points at, e.g. Charters marked
+career-relevant: ground judgements in ~/career/cv.tex. Files never to edit. -->
+
+## How I like to work
+
+<!-- e.g. Prefer hands-on exercises to reading lists. -->
+
+@.claude/generated-context.md
+")
+
 ;;; Registry access (impure)
 
 (defun ps/vault-registry-path ()
@@ -663,19 +698,22 @@ refused."
 
 (defun ps/vault-scaffold (directory &optional name time)
   "Create the starter files for a new vault in DIRECTORY, named NAME.
-Writes a workspace.org, an Inbox.org and a state file, and nothing else.  In
+Writes a workspace.org, an Inbox.org, a starter AGENTS.md with the CLAUDE.md
+that points Claude Code at it, and a state file, and nothing else.  In
 particular it does not run `git init' -- whether a vault syncs is decided by
-whether you made it a repository yourself -- and it never writes an AGENTS.md
-or a .claude directory, which are hand-written and generated respectively.
-Existing files are left alone, so this is safe to run on a folder that already
-holds notes.  TIME is passed to `ps/vault--starter-template'."
+whether you made it a repository yourself -- and it writes nothing into
+.claude/, which the AI context sync and the skill links own.  Existing files
+are left alone, so this is safe to run on a folder that already holds notes.
+TIME is passed to `ps/vault--starter-template'."
   (let* ((root (ps/vault--normalize-path directory))
          (name (or name (ps/vault--directory-name root)))
          (written nil))
     (make-directory root t)
     (pcase-dolist (`(,file . ,text)
                    (list (cons "workspace.org" (ps/vault--workspace-template name))
-                         (cons "Inbox.org" (ps/vault--starter-template time))))
+                         (cons "Inbox.org" (ps/vault--starter-template time))
+                         (cons "AGENTS.md" (ps/vault--agents-template))
+                         (cons "CLAUDE.md" "@AGENTS.md\n")))
       (let ((path (expand-file-name file root)))
         (unless (file-exists-p path)
           (with-temp-file path (insert text))

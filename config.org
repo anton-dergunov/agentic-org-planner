@@ -1059,8 +1059,14 @@ only starts listening once connected).
 generated at all. =ps/ai-context-file= is where it goes, relative to the Org
 base: it holds the TODO-keyword/priority/agenda-scan/tagging/journal facts read
 from this config, plus an index of what each plan file is for, taken from the
-files' =#+SUBTITLE:= lines. =AGENTS.md= just points at it and is never written
-to (see /AI context sync/ near the end of this file for the actual call).
+files' =#+SUBTITLE:= lines, and where the capture inbox is (see /Info triage/).
+=AGENTS.md= points at it; after the starter written into a new vault, Emacs
+never writes to =AGENTS.md= again (see /AI context sync/ near the end of this
+file for the actual call).
+
+=ps/ai-context-guide-file= is the general rules for working in a vault, put
+at the top of the generated file so every vault gets the current version; nil
+means =agent/guide.md= in this config.
 
 =ps/ai-context-next-keyword= names the TODO keyword the agenda gathers into its
 "Next up" section, so the generated file can tell an assistant which keyword to
@@ -1070,6 +1076,7 @@ before rebuilding the index.
 #+begin_src emacs-lisp
   (setq ps/ai-context-enabled t)
   (setq ps/ai-context-file ".claude/generated-context.md")
+  (setq ps/ai-context-guide-file nil)
   (setq ps/ai-context-next-keyword "NEXT")
   (setq ps/ai-context-save-debounce 2.0)
 #+end_src

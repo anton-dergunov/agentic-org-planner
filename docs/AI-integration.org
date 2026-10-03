@@ -38,18 +38,30 @@ put it when a diff closes.
 
 * Telling it how to work with your notes
 The assistant reads a file named =AGENTS.md= in your Org directory (with a tiny
-=CLAUDE.md= alongside that just points to it). That file tells the assistant that
-words like "task", "project", and "note" mean entries in /your/ Org files — so
-when you say "add a task", it edits your plans rather than inventing its own list.
+=CLAUDE.md= alongside that just points to it). It has two halves:
 
-You can open and edit =AGENTS.md= to tune how the assistant behaves. It is yours
-alone — nothing here ever writes to it. If you keep your notes in your own
-directory (not the bundled sample), put your own =AGENTS.md= there.
+- *The general rules*, which come with this configuration: that words like
+  "task", "project" and "note" mean entries in /your/ Org files — so "add a task"
+  edits your plans rather than the assistant's own list — and how to edit them,
+  how a good task is shaped, and how to format Org text. They reach your vault
+  through the generated context file below, so an update to the configuration
+  updates them everywhere.
+- *What is personal to you*, written in =AGENTS.md= itself: the language you want
+  things written in, where your reference notes live, files with special rules,
+  how you like to work. Where the two disagree, yours wins.
+
+Creating a vault writes a starter =AGENTS.md= with a heading for each of those,
+ready to fill in. After that it is yours alone — nothing here ever writes to it
+again. A folder you open as a vault keeps the =AGENTS.md= it already has; if it
+has none, copy the one from the bundled sample (=samples/realistic/AGENTS.md=) and
+make sure it ends with the line =@.claude/generated-context.md=.
 
 ** The generated context file
-Two things the assistant needs are kept up to date for you, in a companion file
-that =AGENTS.md= points at: =.claude/generated-context.md= in your Org directory.
+What the assistant needs from this configuration is kept up to date for you, in
+a companion file that =AGENTS.md= imports: =.claude/generated-context.md= in your
+Org directory.
 
+- *The general rules* described above.
 - *The conventions in force* — your TODO keywords, priorities, tags, whether
   finishing a task logs a timestamp, and where the journal lives. These come from
   =config.org=, so the assistant is told what you actually use instead of guessing
@@ -58,6 +70,8 @@ that =AGENTS.md= points at: =.claude/generated-context.md= in your Org directory
   [[file:Situations.org][Situations]]), two tables: what each tag promises, and which saved search each
   one feeds, so you never have to describe your tags a second time in
   =AGENTS.md=.
+- *Where your capture inbox is* — when you use [[file:Info-triage.org][Info triage]], the location of its
+  digest, so "route triage" needs no path.
 - *An index of your plan files* — one line per file, taken from that file's
   =#+SUBTITLE:=. It lets the assistant route something to the right file without
   opening all of them. Files with no =#+SUBTITLE:= are simply left out, so writing
@@ -71,7 +85,7 @@ demand. Since it is regenerated from scratch every time, you can safely exclude
 it from version control.
 
 Don't edit it: your changes are overwritten. Change =config.org= or the relevant
-file's =#+SUBTITLE:= instead.
+file's =#+SUBTITLE:= instead, and put rules of your own in =AGENTS.md=.
 
 * Skills: filing and reviewing your plans
 Two skills come with this configuration, and the assistant has them in every
@@ -138,8 +152,10 @@ set =ps/claude-no-exit-prompt= to =nil= to get the confirmation back.
   =ps/claude-selection-connect-delay=.
 - The context file: =lisp/ps-ai-context.el=; settings in =config.org= →
   /Settings → AI context sync (ps-ai-context.el)/ — =ps/ai-context-enabled=,
-  =ps/ai-context-file=, =ps/ai-context-next-keyword=,
-  =ps/ai-context-save-debounce=.
+  =ps/ai-context-file=, =ps/ai-context-guide-file=,
+  =ps/ai-context-next-keyword=, =ps/ai-context-save-debounce=. The general
+  rules themselves are =agent/guide.md=.
+- The starter =AGENTS.md=: =lisp/ps-vault.el= (=ps/vault-scaffold=).
 - The skills: =skills/= (one folder per skill); linked by =lisp/ps-skills.el=;
   settings in =config.org= → /Settings → Skills (ps-skills.el)/ —
   =ps/skills-install=, =ps/skills-directory=.

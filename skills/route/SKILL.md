@@ -1,6 +1,6 @@
 ---
 name: route
-description: Take messy captured material — a slice of Inbox.org or another inbox file, the info-triage inbox, or text pasted into the chat — and work out where it belongs in the Org plans: worth keeping at all, already filed elsewhere, shaped into a proper task, and which file and section it goes to. Reports numbered findings and waits for approval; on approval files the items and removes them from the source. Use for "process my inbox", "file this", "where does this go", "route triage", "route the triage inbox".
+description: Take messy captured material — a slice of Inbox.org or another inbox file, the info-triage inbox, or text pasted into the chat — and work out where it belongs in the Org plans (worth keeping at all, already filed elsewhere, shaped into a proper task, and which file and section it goes to). Reports numbered findings and waits for approval; on approval files the items and removes them from the source. Use for "process my inbox", "file this", "where does this go", "route triage", "route the triage inbox".
 ---
 
 # /route — bring messy input into the notes

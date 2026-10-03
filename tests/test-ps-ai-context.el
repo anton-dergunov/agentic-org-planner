@@ -10,6 +10,7 @@
 ;; (mirroring tests/test-ps-claude.el and tests/test-ps-conflicts.el) is what
 ;; makes the `let'-bindings below actually reach `ps/ai-context-sync'.
 (defvar my-org-base-directory)
+(defvar ps/info-triage-directory)
 
 ;;; Parsing org-todo-keywords
 
@@ -252,6 +253,9 @@ context file inside it; the directory is removed afterwards."
           (org-log-done nil)
           (org-tag-alist nil)
           (org-tag-persistent-alist nil)
+          ;; Hermetic: never the real config's guide or capture inbox.
+          (ps/ai-context-guide-file (expand-file-name "no-guide.md" dir))
+          (ps/info-triage-directory nil)
           ,@bindings)
      (ignore file)
      (unwind-protect (progn ,@body)
@@ -318,6 +322,53 @@ context file inside it; the directory is removed afterwards."
   (ps/ai-context-test--with-notes ((ps/ai-context-enabled nil))
     (ps/ai-context-sync)
     (should-not (file-exists-p file))))
+
+(ert-deftest ps/ai-context-test-document-starts-with-the-guide ()
+  "The guide comes first, before the conventions, and ends in a blank line."
+  (let* ((doc (ps/ai-context--render-document
+               '("TODO") '("DONE") ?A ?C "." nil nil nil nil nil nil
+               nil nil "# Rules\n\nBe kind.\n\n\n" nil))
+         (guide (string-match "# Rules\n\nBe kind.\n\n## Current conventions" doc)))
+    (should guide)
+    (should (< guide (string-match "## Current conventions" doc)))))
+
+(ert-deftest ps/ai-context-test-capture-inbox-section ()
+  "Named when there is one, after the tags and before the file index."
+  (let ((doc (ps/ai-context--render-document
+              '("TODO") '("DONE") ?A ?C "." nil nil nil nil nil
+              '(("A.org" . "Alpha")) nil nil nil "/inbox/info/triage.md")))
+    (should (string-match-p "## Capture inbox" doc))
+    (should (string-match-p "`/inbox/info/triage.md`" doc))
+    (should (< (string-match "## Capture inbox" doc)
+               (string-match "## File index" doc))))
+  (should-not (string-match-p "Capture inbox"
+                              (ps/ai-context--render-document
+                               '("TODO") '("DONE") ?A ?C "." nil nil nil nil nil nil))))
+
+(ert-deftest ps/ai-context-test-sync-renders-the-guide-file ()
+  (ps/ai-context-test--with-notes ()
+    (with-temp-file ps/ai-context-guide-file (insert "# Shipped rules\n"))
+    (ps/ai-context-sync)
+    (should (string-match-p "^# Shipped rules$" (ps/ai-context-test--read file)))))
+
+(ert-deftest ps/ai-context-test-sync-without-a-guide-file ()
+  "A missing guide is simply left out."
+  (ps/ai-context-test--with-notes ()
+    (ps/ai-context-sync)
+    (should (string-match-p "-->\n\n## Current conventions"
+                            (ps/ai-context-test--read file)))))
+
+(ert-deftest ps/ai-context-test-sync-names-an-existing-capture-inbox ()
+  (ps/ai-context-test--with-notes ((ps/info-triage-directory
+                                    (file-name-as-directory
+                                     (expand-file-name "inbox" dir))))
+    (ps/ai-context-sync)
+    (should-not (string-match-p "Capture inbox" (ps/ai-context-test--read file)))
+    (make-directory ps/info-triage-directory)
+    (ps/ai-context-sync)
+    (should (string-match-p (regexp-quote (expand-file-name "triage.md"
+                                                            ps/info-triage-directory))
+                            (ps/ai-context-test--read file)))))
 
 (provide 'test-ps-ai-context)
 ;;; test-ps-ai-context.el ends here

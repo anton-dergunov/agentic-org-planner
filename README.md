@@ -25,10 +25,11 @@ everything else works without it.
   a side window, aware of the file you are in and the text you have selected.
   The changes it proposes open as Emacs diffs that you step through and accept
   or reject.
-- **It is told how your plan works** — an `AGENTS.md` in your Org folder says
-  what "task", "project" and "note" mean in your files, and a generated context
-  file passes on your TODO keywords, priorities, tags and saved searches, so it
-  follows your conventions instead of guessing them.
+- **It is told how your plan works** — built-in rules say what "task",
+  "project" and "note" mean in your files and what a well-shaped task looks
+  like, and your TODO keywords, priorities, tags and saved searches are passed
+  on from the config, so it follows your conventions instead of guessing them.
+  An `AGENTS.md` in your Org folder adds what is personal to you.
 - **It files what you captured** — the capture inbox collects the articles,
   papers and clips you forwarded yourself during the day, and hands the ones
   worth keeping to the assistant to file into your plans.

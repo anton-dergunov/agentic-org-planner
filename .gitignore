@@ -21,6 +21,10 @@
 !skills/**/
 !skills/**/*.md
 
+# The general rules for the assistant, rendered into each vault's generated context.
+!agent/
+!agent/*.md
+
 !icons/
 !icons/*.svg
 !icons/material-symbols.codepoints

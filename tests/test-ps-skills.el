@@ -121,7 +121,10 @@
 ;;; The shipped skills themselves
 
 (ert-deftest ps/skills-test-shipped-skills-are-well-formed ()
-  "Every shipped skill has a SKILL.md whose name: matches its folder."
+  "Every shipped skill has a SKILL.md whose name: matches its folder.
+Its description must not contain \": \", which a strict YAML parser (VS Code's
+Markdown preview, for one) reads as a nested mapping, though Claude Code
+accepts it."
   (let ((source (expand-file-name "skills")))
     (dolist (name (ps/skills--shipped source))
       (let ((file (expand-file-name (concat name "/SKILL.md") source)))
@@ -129,6 +132,8 @@
           (should (file-exists-p file))
           (let ((text (ps/skills--read-file file)))
             (should (string-match-p (concat "^name: " (regexp-quote name) "$") text))
-            (should (string-match-p "^description: ." text))))))))
+            (should (string-match-p "^description: ." text))
+            (string-match "^description: \\(.*\\)$" text)
+            (should-not (string-match-p ": " (match-string 1 text)))))))))
 
 ;;; test-ps-skills.el ends here

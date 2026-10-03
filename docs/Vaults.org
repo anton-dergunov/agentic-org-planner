@@ -43,10 +43,13 @@ new vault* or *open an existing folder*. Pick any folder you like — a folder
 inside Dropbox, iCloud, or another sync service keeps your notes available on
 every device.
 
-Creating a vault writes three things into the folder and nothing else:
+Creating a vault writes these into the folder and nothing else:
 
 - =workspace.org= — this vault's own settings, ready to edit (see below).
 - =Inbox.org= — a starter file with one task, so the agenda is not empty.
+- =AGENTS.md= and =CLAUDE.md= — what the AI assistant should know about you and
+  these notes, with a heading for each thing worth filling in (see
+  [[file:AI-integration.org][AI integration]]). Yours from then on; Emacs never writes to them again.
 - =.ps/state.el= — what the interface toggles in this vault (the active file
   set, whether it restricts the agenda), written by Emacs; you never edit this.
 

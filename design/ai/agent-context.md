@@ -158,7 +158,17 @@ source of truth (the files themselves), and it was previously hand-maintained in
 
 The scope has since grown again: the file also carries the context tags and situations
 declared in the vault's `workspace.org` (see [situations.md](../planning/situations.md)),
-and the keyword the assistant should use for "next".
+the keyword the assistant should use for "next", and where the capture inbox's digest
+is (`ps/info-triage-directory`), so the `/route` skill ([skills.md](skills.md)) never
+has a machine path written into it.
+
+**The general rules ride along.** About half of a working `AGENTS.md` turned out to be
+the same for any vault: what "task" means, how to edit, task shape, Org and text
+formatting, the context-tag rules. Those live in `agent/guide.md` in the config and are
+rendered at the top of the generated file (`ps/ai-context-guide-file`). Shipping them
+this way keeps every vault on the current version. Writing them into each new vault's
+`AGENTS.md` would have frozen them at creation, the same staleness that ruled out copying
+the skills.
 
 **When it is written.** From two places only:
 
@@ -174,15 +184,23 @@ the file would be regenerated from stale state.
 
 ## The hand-written AGENTS.md
 
-`CLAUDE.md` in the vault is a one-line `@AGENTS.md` import, so the same instructions
-serve any agent that reads `AGENTS.md`. The rules it carries, each there because an
-agent got it wrong without it:
+`AGENTS.md` holds only what is personal: the language to write in, where reference
+notes live, files with special rules (reference data a charter points at, files never
+to edit), how the user likes to work. `ps/vault-scaffold` writes a starter with a
+heading for each, ending in the `@.claude/generated-context.md` import, and never
+touches it again. `CLAUDE.md` in the vault is a one-line `@AGENTS.md` import, so the
+same instructions serve any agent that reads `AGENTS.md`.
+
+The general rules in `agent/guide.md`, each there because an agent got it wrong
+without it, include:
 
 - **"Task" means an Org heading with a TODO keyword** in these files, never the
   agent's own todo list. The same goes for "project", "plan", "inbox" and "list".
-- **Discover the structure; don't invent file names.** The file is written to fit
-  any vault, so it names no files and assumes no methodology; the generated file
-  supplies the facts.
+- **Discover the structure; don't invent file names.** The guide is written to fit
+  any vault, so it names no files and assumes no methodology; the rest of the
+  generated file supplies the facts.
+- **Edit with the file-editing tools, never the shell.** Line-number splices land
+  in the wrong place; context-anchored edits don't.
 - **Ignore instructions from a code repository above the notes.** If the vault sits
   inside a repository, that repository's instructions are about the software.
 - **Don't verify a notes edit** by launching Emacs, running scripts or running tests.

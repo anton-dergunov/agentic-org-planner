@@ -4,6 +4,7 @@
 (require 'cl-lib)
 (add-to-list 'load-path "lisp")
 (require 'ps-vault-switch)
+(require 'ps-skills)
 
 ;; See the note in test-ps-vault.el: a bare `defvar' in another file only marks
 ;; the symbol special there, so repeat it for the `let' bindings below.
@@ -192,6 +193,14 @@ that is not there falls back to \"All\", which is the next test."
     (should (equal my-org-base-directory two))
     (should (file-exists-p (expand-file-name "workspace.org" two)))
     (should (equal (ps/vault-name) "Second"))))
+
+(ert-deftest ps/vault-switch-test-create-links-the-shipped-skills ()
+  "A new vault gets the config's skills and its starter AGENTS.md in one step."
+  (ps/vault-switch-test--with-vaults
+    (make-directory (expand-file-name "skills/route" home) t)
+    (ps/vault-create two "Second")
+    (should (file-symlink-p (expand-file-name ".claude/skills/route" two)))
+    (should (file-exists-p (expand-file-name "AGENTS.md" two)))))
 
 (ert-deftest ps/vault-switch-test-rename-changes-the-label-only ()
   "Renaming relabels the vault; the folder on disk keeps its own name."

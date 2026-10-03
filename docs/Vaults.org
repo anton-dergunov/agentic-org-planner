@@ -53,6 +53,11 @@ Creating a vault writes three things into the folder and nothing else:
 An existing folder full of Org files works as a vault as it is. Nothing is moved
 or rewritten; open it and it appears in the agenda and the tree.
 
+Whenever a vault opens, new or existing, Emacs also keeps a hidden =.claude/=
+folder in it up to date for the AI assistant: the generated context file, and
+links to the assistant's skills (see [[file:AI-integration.org][AI integration]]). Neither is meant to be
+edited by hand, and the links are kept out of the vault's git history.
+
 * Where settings live
 Settings split into two kinds, and knowing which is which saves a lot of
 confusion later.

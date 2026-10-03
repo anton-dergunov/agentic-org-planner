@@ -16,6 +16,11 @@
 !design/**/
 !design/**/*.md
 
+# Claude Code skills, linked into the vault by lisp/ps-skills.el.
+!skills/
+!skills/**/
+!skills/**/*.md
+
 !icons/
 !icons/*.svg
 !icons/material-symbols.codepoints

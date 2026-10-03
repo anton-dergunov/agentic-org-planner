@@ -32,8 +32,8 @@ again (the noun) goes to the notes vault in Obsidian, as a link inside a topic
 note, and a plan task links to that note rather than holding the material
 (`[[obsidian:…]]`, inserted by `ps-links`). A book or course becomes a plan task
 plus one linked note; a small article becomes a link in a topic note; anything
-that belongs nowhere is dropped. These rules live in the vault's own agent
-instructions and a routing skill, not in code here.
+that belongs nowhere is dropped. These rules live in the agent's instructions
+and the `/route` skill ([skills.md](../ai/skills.md)), not in Emacs Lisp.
 
 **An agent proposes; the person decides.** Items are filed by Claude Code working
 in the vault from the side panel ([claude-code-panel.md](../ai/claude-code-panel.md)),

@@ -61,6 +61,7 @@
 (declare-function ps/git-sync-maybe-start "ps-git-sync")
 (declare-function ps/situations-apply "ps-situations")
 (declare-function ps/ai-context-sync "ps-ai-context")
+(declare-function ps/skills-sync "ps-skills")
 
 (defcustom ps/vault-file-tree-init-delays '(0 0.3 0.8 1.5 3)
   "Seconds after a vault switch at which the file tree setup is re-run.
@@ -230,6 +231,8 @@ switch itself must not depend on a package that may not be installed."
   (ps/vault--step "git sync"
     (when (fboundp 'ps/git-sync-maybe-start)
       (ps/git-sync-maybe-start my-org-base-directory)))
+  (ps/vault--step "skills"
+    (when (fboundp 'ps/skills-sync) (ps/skills-sync)))
   (ps/vault--step "AI context"
     (when (fboundp 'ps/ai-context-sync) (ps/ai-context-sync))))
 

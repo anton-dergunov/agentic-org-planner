@@ -121,6 +121,9 @@ One or two sentences: what this is about.
   its terminal drawn correctly.
 - [`agent-context.md`](ai/agent-context.md) — What an AI agent is told about
   the Org conventions, and how that stays in sync with `config.org`.
+- [`skills.md`](ai/skills.md) — The `/route` and `/audit` skills: three layers
+  with no duplication, the lenses and the findings contract, and why they are
+  linked into each vault rather than copied.
 - [`in-emacs-llm.md`](ai/in-emacs-llm.md) — The gptel and semantic-search
   experiment, why it was set aside for Claude Code, and what would bring it
   back (the code is kept at the `archive/llm-integration` tag).

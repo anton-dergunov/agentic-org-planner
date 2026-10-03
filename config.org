@@ -144,6 +144,7 @@ All self-contained logic lives in =lisp/ps-*.el=.
   (require 'ps-file-tree-icons)
   (require 'ps-claude)
   (require 'ps-ai-context)
+  (require 'ps-skills)
   (require 'ps-typo)
   (require 'ps-org-src-comment)
   (require 'ps-mode-line)
@@ -1071,6 +1072,18 @@ before rebuilding the index.
   (setq ps/ai-context-file ".claude/generated-context.md")
   (setq ps/ai-context-next-keyword "NEXT")
   (setq ps/ai-context-save-debounce 2.0)
+#+end_src
+
+** Skills (ps-skills.el)
+The Claude Code skills shipped in this config's =skills/= folder (=/route=,
+=/audit=) are linked into the open vault's =.claude/skills/= whenever a vault
+opens, so the assistant has them however it is started. =ps/skills-install=
+turns that off. =ps/skills-directory= is where the skills are linked from; nil
+means =skills/= in this config, which keeps a development Emacs pointed at its
+own checkout. A skill folder of your own with the same name is never replaced.
+#+begin_src emacs-lisp
+  (setq ps/skills-install   t
+        ps/skills-directory nil)
 #+end_src
 
 ** Reading width (ps-prose-width.el)
@@ -3125,8 +3138,10 @@ generates from a fully-loaded config. This single call covers both a fresh
 startup and =ps/reload-config= (=C-c p R=), since the latter just re-runs this
 whole file — see =lisp/ps-ai-context.el= for why a tangle-on-save does *not*
 also need to call this. The hook keeps the file index current afterwards, by
-regenerating shortly after any scanned =.org= file is saved.
+regenerating shortly after any scanned =.org= file is saved. The shipped
+skills are linked into the vault here too (see /Skills/ under Settings).
 #+begin_src emacs-lisp
+  (with-demoted-errors "Skills: %S" (ps/skills-sync))
   (ps/ai-context-sync)
   (ps/ai-context-setup-hooks)
 #+end_src

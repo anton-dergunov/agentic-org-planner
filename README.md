@@ -32,6 +32,12 @@ everything else works without it.
 - **It files what you captured** — the capture inbox collects the articles,
   papers and clips you forwarded yourself during the day, and hands the ones
   worth keeping to the assistant to file into your plans.
+- **It keeps your plans in shape** — two built-in skills: `/route` takes a
+  batch of captured items and works out, for each one, whether it's worth
+  keeping, whether you already have it, how to phrase it as a task, and where
+  it belongs. `/audit` reviews a plan file for outdated material, vague tasks
+  and things in the wrong place. Both report numbered findings and change
+  nothing until you pick which to apply.
 
 See [AI integration](docs/AI-integration.org) for how to set it up and steer it.
 

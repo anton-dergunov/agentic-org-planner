@@ -90,6 +90,22 @@ region otherwise, with the corners masked afterwards."
            (format "roundrectangle 0,0,%%[fx:w-1],%%[fx:h-1],%s,%s" r r) ")"
            "-alpha" "off" "-compose" "CopyOpacity" "-composite" file))))
 
+(defvar ps/screenshot-outline-color "#9a9a9a"
+  "Colour of the thin outline drawn around every picture.")
+
+(defun ps/screenshot--outline (file)
+  "Draw a two-pixel outline along the window's shape in FILE.
+On a white page the cream window has nothing to end against otherwise.  It
+follows the picture's own transparency, so the rounded corners are outlined
+too; running it again changes nothing."
+  (eq 0 (call-process
+         "magick" nil nil nil file
+         "(" "+clone" "-alpha" "extract" "-virtual-pixel" "black"
+         "-morphology" "EdgeIn" "Diamond:2" "-write" "mpr:edge" "+delete" ")"
+         "(" "+clone" "-fill" ps/screenshot-outline-color "-colorize" "100"
+         "mpr:edge" "-alpha" "off" "-compose" "CopyOpacity" "-composite" ")"
+         "-compose" "Over" "-composite" file)))
+
 (defun ps/screenshot-frame (name)
   "Save the selected frame as NAME.png in `ps/screenshot-directory'."
   (interactive "sPicture name: ")
@@ -108,6 +124,7 @@ region otherwise, with the corners masked afterwards."
     (unless (ps/screenshot--capture out)
       (user-error "screencapture failed for %s" out))
     (call-process "sips" nil nil nil "-Z" (number-to-string ps/screenshot-width) out)
+    (ps/screenshot--outline out)
     (call-process "pngquant" nil nil nil "--force" "--skip-if-larger"
                   "--output" out "256" out)
     (message "Saved %s" out)

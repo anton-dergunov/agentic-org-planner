@@ -82,17 +82,22 @@ def fits(parts):
 parts = next((p for p in ([prompt, w_, reply, apply] for w_ in search_blocks()) if fits(p)),
              [prompt, reply, apply])
 heights = [y1 - y0 for _, (y0, y1) in parts]
-total = sum(heights) + line * len(parts)
-start = dialog_top - total
 if not fits(parts):
-    sys.exit(f"does not fit: needs {total}px above the dialog, has {dialog_top - gb['top']}")
+    sys.exit(f"does not fit above the dialog ({dialog_top - gb['top']}px)")
+gaps = [line] * len(parts)
+# With the search kept and the prompt flush against the top, close the blank
+# line between the search and the reply instead: a line of air above the prompt
+# reads better than a prompt jammed under the title bar.
+if len(parts) == 4 and dialog_top - sum(heights) - sum(gaps) - gb["top"] < line:
+    gaps[1] = 0
+start = dialog_top - sum(heights) - sum(gaps)
 print(f"free space above the prompt: {start - gb['top']}px ({(start - gb['top']) // line} lines)")
 cmd = ["magick", b_png, "-fill", "#FDF6E3", "-draw",
        f"rectangle {x0},{gb['top']} {x0 + w - 1},{dialog_top - 1}"]
 y = start
-for (png, (y0, y1)), h in zip(parts, heights):
+for (png, (y0, y1)), h, gap in zip(parts, heights, gaps):
     cmd += ["(", png, "-crop", f"{w}x{h}+{x0}+{y0}", "+repage", ")",
             "-geometry", f"+{x0}+{y}", "-composite"]
-    y += h + line
+    y += h + gap
 subprocess.run(cmd + [out], check=True)
 subprocess.run(["pngquant", "--force", "--skip-if-larger", "--output", out, "256", out])

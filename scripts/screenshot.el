@@ -160,6 +160,32 @@ control windows are closed.  Run it again after a change to redraw."
         (when-let ((w (get-buffer-window buf-a))) (delete-window w))))
     (ps/screenshot-hide-ediff-control)))
 
+(defun ps/screenshot-panel-rows ()
+  "Return the Claude panel's edges and the picture row of each of its lines.
+In saved-picture pixels.  Print it to a file beside each capture of the lead
+shot; scripts/compose_lead_screenshot.py cuts the panel by it."
+  (let* ((w (get-buffer-window "*claude-code[notes]*"))
+         (scale (/ 1920.0 (car ps/screenshot-size)))
+         (title (- (nth 1 (frame-edges nil 'inner-edges)) (nth 1 (frame-edges nil 'outer-edges))))
+         (left (- (nth 0 (frame-edges nil 'inner-edges)) (nth 0 (frame-edges nil 'outer-edges))))
+         (edges (window-pixel-edges w))
+         (body (window-body-pixel-edges w))
+         rows)
+    (with-selected-window w
+      (save-excursion
+        (goto-char (window-start w))
+        (while (and (< (point) (point-max)) (pos-visible-in-window-p (point) w))
+          (let ((p (posn-at-point (point) w)))
+            (when p
+              (push (list (round (* scale (+ title (nth 1 body) (cdr (posn-x-y p)))))
+                          (buffer-substring-no-properties (line-beginning-position) (min (line-end-position) (+ (line-beginning-position) 60))))
+                    rows)))
+          (forward-line 1))))
+    (list :x0 (round (* scale (+ left (nth 0 edges)))) :x1 (round (* scale (+ left (nth 2 edges))))
+          :top (round (* scale (+ title (nth 1 body)))) :bottom (round (* scale (+ title (nth 3 body))))
+          :line (round (* scale (frame-char-height)))
+          :rows (nreverse rows))))
+
 ;;; This session only
 
 ;; The pictures show the sample notes, never a sync in progress -- and no sync

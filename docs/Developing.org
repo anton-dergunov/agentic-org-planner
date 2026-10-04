@@ -112,6 +112,9 @@ helpers make a retake repeatable:
   to =screenshots/= at 1920×1200 with transparent corners, and
   =M-x ps/screenshot-inline-diff=, which shows a change the assistant proposed
   inline in one buffer.
+- =scripts/compose_lead_screenshot.py= assembles the lead picture's assistant
+  panel from two captures, keeping the prompt, the reply and the edit request
+  and leaving out the assistant's tool-call lines.
 
 It is macOS-only: it uses =screencapture=, so whatever launches Emacs needs
 Screen Recording permission.

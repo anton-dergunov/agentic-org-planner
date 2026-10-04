@@ -255,7 +255,14 @@ Returns a plist with :overlaps and :gaps, each an alist of (date . pairs)."
 (define-derived-mode ps-conflicts-mode special-mode "Conflicts"
   "Major mode for the *Org Conflicts* buffer.
 \\{ps-conflicts-mode-map}"
-  (setq-local mode-line-format '((:eval (ps/mode-line--simple-view-render "Conflicts")))))
+  (setq-local mode-line-format '((:eval (ps/mode-line--simple-view-render "Conflicts"))))
+  ;; A conflict line too long for the window breaks between words and goes on
+  ;; under the event text, not back at the left edge.
+  (setq-local word-wrap t
+              wrap-prefix (make-string 4 ?\s)
+              ;; The indent already shows the line goes on; no fringe arrows.
+              fringe-indicator-alist (cons '(continuation . nil)
+                                           fringe-indicator-alist)))
 
 (let ((map ps-conflicts-mode-map))
   (define-key map (kbd "g")   #'ps/conflicts--buffer-refresh)
@@ -336,7 +343,10 @@ ACTIVE non-nil renders it in the pressed/active face."
      " ↺ refresh "
      (lambda (_b) (with-current-buffer buf (ps/conflicts--buffer-render))))
     (insert "\n")
-    (insert (make-string 78 ?─))
+    ;; A stretch to the right edge rather than a run of characters: it follows
+    ;; the window as it is resized, and so never wraps onto a second line.
+    (insert (propertize " " 'display '(space :align-to (- right 1))
+                        'face '(:strike-through t)))
     (insert "\n")))
 
 (defun ps/conflicts--insert-event-button (event)

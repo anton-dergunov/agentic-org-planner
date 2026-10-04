@@ -564,7 +564,9 @@ TINT is one of `overdue', `today', `future', or `time' (timed events)."
                      (if deadline-p (org-get-deadline-time (point))
                        (org-get-scheduled-time (point))))))
         (when time
-          (let* ((days (- (time-to-days time) (time-to-days (current-time))))
+          ;; `org-today', not the clock: before `org-extend-today-until' the
+          ;; agenda still shows yesterday, and its items must not read "1d ago".
+          (let* ((days (- (time-to-days time) (org-today)))
                  (glyph (ps/agenda-layout--reldate-glyph type))
                  (text (ps/agenda-layout--reldate-string days)))
             (cons (if glyph (concat glyph " " text) text)

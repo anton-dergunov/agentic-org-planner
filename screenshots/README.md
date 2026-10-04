@@ -10,7 +10,7 @@ conversation can't be replayed by a script, so there isn't one.
 - PNG, 1920×1200 (16:10), the format of the blog's project pictures, with transparent rounded
   corners.
 - Solarized Light, the default theme. Other themes appear only in the docs' gallery.
-- Frame 1067×667 points, or 1200×750 for the two agent scenes, which need room for the Claude
+- Frame 1067×667 points; 1280×800 for the lead and 1200×750 for `/route`, which need room for the Claude
   Code panel. The frame is small on purpose: scaled to 1920 pixels wide, its text comes out
   large enough to read on a project card.
 
@@ -50,14 +50,14 @@ In carousel order. The blog uses 1, 2, 4, 5, 6 and 9.
 
 | # | File | Scene |
 |---|---|---|
-| 1 | `agent-audit.png` | 1200×750, no file tree. `ML/ML.org`, Claude Code at 72 columns in manual mode (Shift+Tab until the footer says so, or edits won't wait for review). `/clear`, then `/audit ML/ML.org line 13 — vet lens, no web search; reply with just the numbered finding in two sentences, no scope line`, then `apply 1`. When the Ediff opens, `M-x ps/screenshot-inline-diff` shows the change inline in the proposed buffer. The prompt, the reply and the edit request must all be on screen; if not, narrow the prompt rather than editing what Claude wrote. Cancel the edit afterwards. |
+| 1 | `agent-audit.png` | 1280×800. File tree at 19 columns, `ML/ML.org`, Claude Code at 70 columns, a fresh session in manual mode (Shift+Tab until the footer says so). `/audit ML/ML.org line 5 — vet lens; one finding in at most 4 lines; put links in the task, no sources list`; approve its web reads; then `apply 1` and `M-x ps/screenshot-inline-diff`. A composite: take one capture when the reply is done and one at the edit prompt, then rebuild the panel from the prompt, the reply, `apply 1` and the edit dialog, leaving out the tool-call lines (searches, fetches, "Update"). Line positions come from `posn-at-point` in the panel; everything outside the panel is the second capture unchanged. |
 | 2 | `agent-route.png` | 1200×750. `triage.org` of the sample queue, Claude Code beside it. `/clear`, then `/route the triage inbox, items from 2026-08-18: exactly one short line per item (decision → file § section), no explanations; stay in this folder, no web search`. Approve only read-only commands inside the notes folder; decline anything that looks outside it. |
 | 3 | `capture-inbox.png` | `C-c p I`, RET on item 4 (the paper). Queue scrolled to its first day, `index.md` scrolled to its Sources. |
 | 4 | `agenda.png` | File tree + `C-c p a`, point on the first scheduled task. |
-| 5 | `schedule.png` | The agenda (16 lines) above `ps/show-conflicts` (10 lines) above `ps/org-show-availability`, all full width. |
+| 5 | `schedule.png` | No file tree. The Calendar's day view (`C-c p c d`) top left, `ps/show-conflicts` (Include past on) top right, `ps/org-show-availability` in its inline layout across the bottom, about 14 lines. Redraw the Calendar and Conflicts once their windows have their final widths. |
 | 6 | `plan-file.png` | `Work/Career.org` from the top, point at the end of line 12. |
 | 7 | `file-tree.png` | Tree widened to 62 columns, `ML` (the file) expanded, then its "Foundation Models" and "LLM Evaluation" headings; `ML/ML.org` beside it. |
-| 8 | `situations.png` | `C-c p S m`, then TAB on "Map current strengths and weaknesses" (the task opens below), then the "Situations ▾" menu open. The menu is modal: open it from a timer with a click posn about 390 px into the agenda window, grab the frame region from the shell with `screencapture -R`, press Escape, then round the corners with `ps/screenshot--round-corners`. |
+| 8 | `situations.png` | Tree at 17 columns. `C-c p S m`, the task "Map current strengths and weaknesses" open in an 11-line window below, then the "Situations ▾" menu open as a dropdown. The menu is modal: open it from a timer with a click posn about 330 pt left of the button's right edge, just under it, grab the frame region from the shell with `screencapture -R`, press Escape, then round the corners with `ps/screenshot--round-corners`. |
 | 9 | `blank-lines.png` | In the playground from `scripts/make_blank_line_playground.sh`, F7, then `d` on `Body/Health.org`; report narrowed to 60 columns, panes balanced, `ps/screenshot-hide-ediff-control`. |
 
 `plan-file-tango.png` and `plan-file-modus-vivendi.png` repeat shot 6 under those themes

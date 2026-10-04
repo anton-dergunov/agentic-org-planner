@@ -9,7 +9,7 @@ Emacs configuration built for planning, so the editor looks like a modern tool f
 launch instead of like the 1980s.
 
 <p align="center">
-  <img src="screenshots/agent-audit.png" alt="The ML plan file with a change Claude Code proposed shown inline, the vague retrieval-augmented generation task struck out, and Claude Code beside it: the /audit prompt, its one finding (merge that task into the hands-on retrieval benchmark), the reply apply 1, and its request to make the edit" width="820">
+  <img src="screenshots/agent-audit.png" alt="The file tree, the ML plan file with a change Claude Code proposed shown inline (the FlashAttention reading task rewritten to start from the 2022 paper and then skim FlashAttention-4, with both arXiv links), and Claude Code beside it: the /audit prompt, its one finding, the reply apply 1, and its request to make the edit" width="820">
 </p>
 
 The assistant needs a Claude subscription; everything else works without it. The configuration
@@ -31,15 +31,17 @@ doubles as a complete `~/.emacs.d`, so you can use it whole or borrow pieces of 
   is worth keeping, whether you already have it, how to phrase it as a task and where it
   belongs. Both report numbered findings and change nothing until you pick which to apply.
 
-![The capture inbox's queue on the left and Claude Code on the right, asked to /route one day's items with one line each: two merges into existing tasks, a duplicate caught, and a new task, each with the plan file and section it goes to](screenshots/agent-route.png)
-
 - **It files what you captured.** The articles, papers and posts you forward to yourself during
   the day arrive as a numbered queue, prepared by the separate
   [agent-context-pipeline](https://github.com/anton-dergunov/agent-context-pipeline) project:
-  links resolved, the content extracted, related notes looked up. You read it in Emacs, drop
-  what is not worth keeping, and hand the rest to `/route`, which sees the same numbers.
+  links resolved, the content extracted, related notes looked up. You can work the queue
+  entirely by hand: read each item in Emacs, file it, drop what is not worth keeping.
 
 ![The capture inbox in Emacs: the queue of captured items by day, a paper selected, and below it what was extracted from it: its sources with authors and word counts, and its abstract as the lead](screenshots/capture-inbox.png)
+
+Or hand it to `/route`, which sees the same numbers and proposes where each item goes.
+
+![The capture inbox's queue on the left and Claude Code on the right, asked to /route one day's items with one line each: two merges into existing tasks, a duplicate caught, and a new task, each with the plan file and section it goes to](screenshots/agent-route.png)
 
 See [AI integration](docs/AI-integration.org) and [Info triage](docs/Info-triage.org) for how
 to set it up and steer it.
@@ -60,12 +62,12 @@ to set it up and steer it.
   hand, offline"), so an awkward gap in the day has an answer ready instead of turning into a
   scroll. Pick one from a menu, and open any task in it to see its notes.
 
-![The "A spare minute" situation with its switcher open, listing the other situations, and one of its tasks opened below with its notes](screenshots/situations.png)
+![The "A spare minute" situation with its switcher open below the Situations button, listing the other situations, and one of its tasks opened below with its notes](screenshots/situations.png)
 
 - **Planning tools**: free slots across the coming days, overlapping events, and shifting
   timestamps between time zones.
 
-![The agenda's schedule above the Conflicts view, which names the two overlapping meetings, and the Availability view, which lists the free slots of the coming days](screenshots/schedule.png)
+![The calendar for the day beside the Conflicts view, which names the two overlapping meetings, and below them the Availability view, one line of free slots per day for the coming two weeks](screenshots/schedule.png)
 
 ## An Emacs that looks and works right
 
@@ -104,6 +106,19 @@ checking that flags only what is likely wrong, and themes you can audition live 
 
 - **Background Git sync** of your Org folder, with its state in the mode line, and a one-time
   setup that keeps a Dropbox folder and Git from corrupting each other.
+
+## Make it yours
+
+Themes, fonts and the look of each part are set in one place, and the vault-specific settings
+(file icons, saved searches, file sets) live in the vault itself. The configuration is tuned for
+Solarized Light, but any theme works; here are two others:
+
+<p align="center">
+  <img src="screenshots/plan-file-tango.png" alt="The Career plan file in the Tango theme" width="49%">
+  <img src="screenshots/plan-file-modus-vivendi.png" alt="The Career plan file in the dark Modus Vivendi theme" width="49%">
+</p>
+
+See [Customization & appearance](docs/Customization.org) for the settings and the gallery.
 
 ## Quick start
 

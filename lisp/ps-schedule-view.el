@@ -579,6 +579,10 @@ layout overlays (the hidden day header, the blank line under the control row)."
                      (t
                       (ps/agenda-layout--hide-line bol eol))))))))
             (forward-line 1))))
+        ;; Draw the dotted separator and even out the row heights -- before the
+        ;; now-line below is attached: as an `after-string' it would count as a
+        ;; second line of the last row, and every row would be drawn that tall.
+        (ps/schedule-view--draw-bars)
         ;; When past midnight the original now-line was hidden at the top of the
         ;; grid; re-attach it as a normal line right after the last visible
         ;; schedule line via an `after-string' overlay (stays inside the section,
@@ -586,9 +590,7 @@ layout overlays (the hidden day header, the blank line under the control row)."
         (when (and now-bottom-str last-vis-eol)
           (let ((ov (make-overlay last-vis-eol last-vis-eol)))
             (overlay-put ov 'ps/agenda-layout t)
-            (overlay-put ov 'after-string (concat "\n" now-bottom-str)))))
-        ;; Draw the dotted separator and even out the row heights.
-        (ps/schedule-view--draw-bars)))))
+            (overlay-put ov 'after-string (concat "\n" now-bottom-str)))))))))
 
 ;;; Auto-refresh timer
 

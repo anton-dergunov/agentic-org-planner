@@ -574,14 +574,15 @@ Returns the buffer."
         (kill-buffer buf)))))
 
 (ert-deftest ps/conflicts--buffer-render-has-separator ()
-  "Rendered buffer contains the ─── separator line."
+  "Rendered buffer has the separator rule, stretched to the window's right edge."
   (ps/conflicts-test--with-org-dir ""
     (let ((buf (ps/conflicts-test--make-buffer dir)))
       (unwind-protect
           (with-current-buffer buf
             (ps/conflicts--buffer-render)
-            (goto-char (point-min))
-            (should (search-forward "─" nil t)))
+            (should (cl-loop for pos from (point-min) below (point-max)
+                             thereis (equal (get-text-property pos 'display)
+                                            '(space :align-to (- right 1))))))
         (kill-buffer buf)))))
 
 (ert-deftest ps/conflicts--buffer-render-no-conflicts-message ()

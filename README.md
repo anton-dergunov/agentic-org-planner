@@ -9,7 +9,7 @@ Emacs configuration built for planning, so the editor looks like a modern tool f
 launch instead of like the 1980s.
 
 <p align="center">
-  <img src="screenshots/agent-audit.png" alt="The file tree, the ML plan file with a change Claude Code proposed shown inline (the FlashAttention reading task rewritten to start from the 2022 paper and then skim FlashAttention-4, with both arXiv links), and Claude Code beside it: the /audit prompt, its one finding, the reply apply 1, and its request to make the edit" width="820">
+  <img src="screenshots/agent-audit.png" alt="The file tree, the ML plan file with a change Claude Code proposed shown inline (the FlashAttention reading task rewritten to start from the 2022 paper and then skim FlashAttention-4, with both arXiv links), and Claude Code beside it: the /audit prompt, a web search, its one finding, the reply apply 1, and its request to make the edit" width="820">
 </p>
 
 The assistant needs a Claude subscription; everything else works without it. The configuration

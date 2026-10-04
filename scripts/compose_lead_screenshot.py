@@ -4,8 +4,8 @@
 The lead picture has to show a whole exchange -- the prompt, Claude's reply, the
 "apply N" answer and the edit dialog -- but between them Claude Code prints its
 tool calls (searches, fetches, "Update"), which push the prompt off the screen
-and say nothing about this project.  This keeps the four parts and drops the
-rest.  Nothing Claude wrote is changed: every part is cut whole from a capture.
+and say little about this project.  This keeps the four parts, plus the first
+web search when there is room for it, and drops the rest.  Nothing Claude wrote is changed: every part is cut whole from a capture.
 
     scripts/compose_lead_screenshot.py A.png rows-a.txt B.png rows-b.txt OUT.png
 
@@ -54,19 +54,37 @@ def prompt_block():
     i = next(k for k, (_, s) in enumerate(ra) if s.startswith("❯ /"))
     j = next(k for k in range(i + 1, len(ra)) if not ra[k][1].strip())
     return a_png, (ys[i], ys[j])
-parts = [prompt_block(),
-         find(r"^⏺ Scope|^⏺ \d\.|^  1\. ", r'Reply "apply|Pick |apply it', [B, A]),
-         find(r"^❯ apply", r"^❯ apply", [B, A])]
-dialog = block(rb, r"^[─]{10}", r"^[─]{10}", gb["bottom"])
+prompt = prompt_block()
+reply = find(r"^⏺ Scope|^⏺ \d\.|^  1\. ", r'Reply "apply|Pick |apply it', [B, A])
+apply = find(r"^❯ apply", r"^❯ apply", [B, A])
 # The dialog's rule is the last rule line above "Opened changes".
 rules = [y for y, s in rb if s.startswith("──────────")]
 opened = next(y for y, s in rb if "Opened changes" in s)
 dialog_top = max(y for y in rules if y < opened)
 
+def search_blocks():
+    """The first Web Search call, with and without its result line: one tool
+    call is kept when there is room, to show the agent looked things up."""
+    ys = [y for y, _ in ra]
+    i = next((k for k, (_, s) in enumerate(ra) if s.startswith("⏺ Web Search")), None)
+    if i is None: return []
+    j = i + 1
+    while j < len(ra) and ra[j][1].strip() and not ra[j][1].lstrip().startswith("⎿"):
+        j += 1
+    call = (a_png, (ys[i], ys[j]))
+    if j < len(ra) and ra[j][1].lstrip().startswith("⎿"):
+        return [(a_png, (ys[i], ys[j + 1])), call]
+    return [call]
+
+def fits(parts):
+    return dialog_top - sum(y1 - y0 + line for _, (y0, y1) in parts) >= gb["top"]
+
+parts = next((p for p in ([prompt, w_, reply, apply] for w_ in search_blocks()) if fits(p)),
+             [prompt, reply, apply])
 heights = [y1 - y0 for _, (y0, y1) in parts]
 total = sum(heights) + line * len(parts)
 start = dialog_top - total
-if start < gb["top"]:
+if not fits(parts):
     sys.exit(f"does not fit: needs {total}px above the dialog, has {dialog_top - gb['top']}")
 print(f"free space above the prompt: {start - gb['top']}px ({(start - gb['top']) // line} lines)")
 cmd = ["magick", b_png, "-fill", "#FDF6E3", "-draw",

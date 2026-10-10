@@ -262,9 +262,10 @@ context file inside it; the directory is removed afterwards."
           (org-log-done nil)
           (org-tag-alist nil)
           (org-tag-persistent-alist nil)
-          ;; Hermetic: never the real config's guide or capture inbox.
+          ;; Hermetic: never the real config's guide, capture inbox or paper library.
           (ps/ai-context-guide-file (expand-file-name "no-guide.md" dir))
           (ps/info-triage-directory nil)
+          (ps/ai-context-paper-library nil)
           ,@bindings)
      (ignore file)
      (unwind-protect (progn ,@body)
@@ -353,6 +354,32 @@ context file inside it; the directory is removed afterwards."
   (should-not (string-match-p "Capture inbox"
                               (ps/ai-context--render-document
                                '("TODO") '("DONE") ?A ?C "." nil nil nil nil nil nil))))
+
+(ert-deftest ps/ai-context-test-papers-section ()
+  "The command is named when there is a library, after the capture inbox."
+  (let ((doc (ps/ai-context--render-document
+              '("TODO") '("DONE") ?A ?C "." nil nil nil nil nil
+              '(("A.org" . "Alpha")) nil nil nil "/inbox/info/triage.md" "/my papers")))
+    (should (string-match-p "## Papers" doc))
+    (should (string-match-p "`paperlib -C /my\\\\ papers info " doc))
+    (should (< (string-match "## Capture inbox" doc)
+               (string-match "## Papers" doc)
+               (string-match "## File index" doc))))
+  (should-not (string-match-p "## Papers"
+                              (ps/ai-context--render-document
+                               '("TODO") '("DONE") ?A ?C "." nil nil nil nil nil nil))))
+
+(ert-deftest ps/ai-context-test-sync-names-a-real-paper-library ()
+  "A folder is a paper library only when its config file is there."
+  (ps/ai-context-test--with-notes ((ps/ai-context-paper-library
+                                    (expand-file-name "papers" dir)))
+    (make-directory ps/ai-context-paper-library)
+    (ps/ai-context-sync)
+    (should-not (string-match-p "## Papers" (ps/ai-context-test--read file)))
+    (with-temp-file (expand-file-name "paper-library.yaml" ps/ai-context-paper-library))
+    (ps/ai-context-sync)
+    (should (string-match-p (regexp-quote (concat "paperlib -C " ps/ai-context-paper-library))
+                            (ps/ai-context-test--read file)))))
 
 (ert-deftest ps/ai-context-test-sync-renders-the-guide-file ()
   (ps/ai-context-test--with-notes ()

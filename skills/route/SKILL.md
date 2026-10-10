@@ -97,6 +97,12 @@ one item and is self-contained.
   quoted above, including on-screen text and speech; opening the body adds
   nothing. `excerpt` — an arbitrary prefix, so the payload may well be below the
   cut. Spend Reads on `excerpt`, not on the other two.
+- **`## Paper library` is what the user's paper library reported at sync.** Do not
+  run `paperlib info` for that paper again. "In the library" answers part of `dup`,
+  and the note and overview it lists are what a task cites instead of the link. For
+  a paper outside it, the venue, citations and nearest papers held are evidence for
+  `vet`. It is a report, never a verdict: whether the item is kept is still yours
+  to judge and the user's to decide.
 - **`extraction:` says how far that verification got.** `ok` — the body was
   retrieved. `partial` — only part was (the reason key says which); treat
   quality judgements as unverified per `lenses.md`. `failed` — nothing was

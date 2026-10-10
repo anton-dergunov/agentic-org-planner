@@ -78,6 +78,11 @@ Org directory.
   =AGENTS.md=.
 - *Where your capture inbox is* — when you use [[file:Info-triage.org][Info triage]], the location of its
   digest, so "route triage" needs no path.
+- *How to ask your paper library* — when you keep one (the separate
+  =agentic-paper-library= project) and name its folder in
+  =ps/ai-context-paper-library=, the one command that says whether you already
+  hold a paper, where its note is, and how well it is cited. The assistant uses
+  it for a paper met anywhere: a chat, your inbox, an old task.
 - *An index of your plan files* — one line per file, taken from that file's
   =#+SUBTITLE:=. It lets the assistant route something to the right file without
   opening all of them. Files with no =#+SUBTITLE:= are simply left out, so writing
@@ -162,7 +167,9 @@ set =ps/claude-no-exit-prompt= to =nil= to get the confirmation back.
 - The context file: =lisp/ps-ai-context.el=; settings in =config.org= →
   /Settings → AI context sync (ps-ai-context.el)/ — =ps/ai-context-enabled=,
   =ps/ai-context-file=, =ps/ai-context-guide-file=,
-  =ps/ai-context-next-keyword=, =ps/ai-context-save-debounce=. The general
+  =ps/ai-context-next-keyword=, =ps/ai-context-save-debounce=.
+  =ps/ai-context-paper-library= is machine-local: set it with
+  =M-x customize-variable=. The general
   rules themselves are =agent/guide.md=.
 - The starter =AGENTS.md=: =lisp/ps-vault.el= (=ps/vault-scaffold=).
 - The skills: =skills/= (one folder per skill); linked by =lisp/ps-skills.el=;

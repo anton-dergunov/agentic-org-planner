@@ -162,6 +162,17 @@ the keyword the assistant should use for "next", and where the capture inbox's d
 is (`ps/info-triage-directory`), so the `/route` skill ([skills.md](skills.md)) never
 has a machine path written into it.
 
+It also names the command that asks a paper library about a paper, when
+`ps/ai-context-paper-library` names one (a folder of the separate
+agentic-paper-library project). This is in the generated file and not in a skill on
+purpose: a paper turns up in a chat, in `Inbox.org` or in an old task as often as in
+the capture inbox, and a session that runs no skill must still know that one
+`paperlib info` call answers "do I have this, and how good is it" more cheaply than a
+search and a fetch. The section is about 90 tokens and is absent without the setting,
+so a vault with no paper library pays nothing. The capture pipeline asks the same
+command at sync and writes the answer into the item, which `/route` reads instead of
+asking again; the two integrations do not depend on each other.
+
 **The general rules ride along.** About half of a working `AGENTS.md` turned out to be
 the same for any vault: what "task" means, how to edit, task shape, Org and text
 formatting, the context-tag rules. Those live in `agent/guide.md` in the config and are

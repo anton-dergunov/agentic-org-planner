@@ -61,7 +61,9 @@ They are a pipeline, not a menu: `vet` gates the rest. A `DROP` ends that item; 
   the product page. A one-line capture in these notes records what the user thought years ago, not what
   the thing is now. If a source cannot be fetched (paywall, 403, login wall), say so *in the
   finding* and mark that judgement unverified rather than letting recalled knowledge pass as a
-  checked fact. When the item comes from the info-triage inbox, none of that fetching applies:
+  checked fact. For a research paper, when `.claude/generated-context.md` has a
+  *Papers* section, run the command it names before anything else: one call says whether
+  the user already holds the paper, and gives its venue and citations. When the item comes from the info-triage inbox, none of that fetching applies:
   the artifact is already on disk at `<id>/extracted/NN-*/content.md` and *that* is what to
   open, "cannot be fetched" is already answered by `extraction:`, and a currency check may
   still need a search but starts from the title, author and date in the frontmatter rather

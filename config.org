@@ -1068,6 +1068,13 @@ file for the actual call).
 at the top of the generated file so every vault gets the current version; nil
 means =agent/guide.md= in this config.
 
+=ps/ai-context-paper-library=, the folder of a paper library (the separate
+=agentic-paper-library= project), is not set here, because it lives somewhere
+different on each machine: set it with =M-x customize-variable=, which saves it
+in =custom.el=. With it set, the generated file
+tells the assistant to ask =paperlib info= about a research paper; without it
+nothing about papers is said.
+
 =ps/ai-context-next-keyword= names the TODO keyword the agenda gathers into its
 "Next up" section, so the generated file can tell an assistant which keyword to
 use for a next action; nil omits that fact.

@@ -89,6 +89,7 @@
 ;; Optional: git-sync status is appended to the file-tree mode line when the
 ;; module is loaded.  Guarded with `fboundp', so this file stays standalone.
 (declare-function ps/git-sync--modeline "ps-git-sync" ())
+(declare-function ps/info-triage--modeline "ps-info-triage" ())
 (declare-function ps/nav-note-departure "ps-nav" (&optional window))
 (require 'subr-x)
 
@@ -598,7 +599,9 @@ See `ps/file-tree-set-applies-to-agenda'."
 (defun ps/file-tree--modeline ()
   "Return the file-tree mode line: file-set selector + git-sync status.
 The file-set selector is clickable (mouse-1 switches sets).  The git-sync
-status (text label + tooltip) is appended when `ps-git-sync' is loaded."
+status (text label + tooltip) is appended when `ps-git-sync' is loaded, and
+after it the Info Triage sync marker while that has something to report --
+this is the one mode line on screen whatever buffer is selected."
   (let ((fileset
          (propertize (format " %s ▾%s" ps/file-tree-current-set
                              (if ps/file-tree-set-applies-to-agenda " 📅" ""))
@@ -612,11 +615,14 @@ status (text label + tooltip) is appended when `ps-git-sync' is loaded."
                        (define-key map [mode-line mouse-1] #'ps/file-tree--modeline-click)
                        map)))
         (sync (and (fboundp 'ps/git-sync--modeline)
-                   (ps/git-sync--modeline))))
+                   (ps/git-sync--modeline)))
+        (triage (and (fboundp 'ps/info-triage--modeline)
+                     (ps/info-triage--modeline))))
     ;; No separator before the sync status: the `▾' already separates it.
-    (if (and sync (> (length sync) 0))
-        (concat fileset " " sync)
-      fileset)))
+    (mapconcat #'identity
+               (seq-remove #'string-empty-p
+                           (list fileset (or sync "") (or triage "")))
+               " ")))
 
 ;;; Expand / collapse all
 

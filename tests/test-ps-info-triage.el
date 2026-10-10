@@ -1,6 +1,7 @@
 ;;; test-ps-info-triage.el --- ERT tests for ps-info-triage -*- lexical-binding: t; -*-
 
 (require 'ert)
+(require 'cl-lib)
 (require 'org)
 (add-to-list 'load-path "lisp")
 (require 'ps-info-triage)
@@ -169,6 +170,17 @@ is shared, and a menu for a tool you do not have is noise."
   (let ((ps/info-triage-directory "/nowhere/at/all/"))
     (should-not (ps/info-triage-available-p))))
 
+;; `ps/info-triage-sync-script' is bound to nil explicitly: a machine-local
+;; setting would otherwise decide the result.
+(ert-deftest ps/info-triage-available-p-accepts-a-sync-script-alone ()
+  "The first sync is what creates the inbox, so requiring the inbox would hide
+the only command able to make it."
+  (let ((ps/info-triage-directory "/nowhere/at/all/"))
+    (let ((ps/info-triage-sync-script nil))
+      (should-not (ps/info-triage-available-p)))
+    (let ((ps/info-triage-sync-script "/somewhere/sync.sh"))
+      (should (ps/info-triage-available-p)))))
+
 (ert-deftest ps/info-triage-queue-buffer-p-matches-only-the-generated-queue ()
   (let* ((inbox (make-temp-file "ps-triage-test-" :directory))
          (ps/info-triage-directory (file-name-as-directory inbox))
@@ -193,8 +205,132 @@ is shared, and a menu for a tool you do not have is noise."
     (should-error (ps/info-triage-open) :type 'user-error)))
 
 ;;; -------------------------------------------------------
+;;; Sync status -- read out of the script's own output
+;;; -------------------------------------------------------
+
+(ert-deftest ps/info-triage--parse-progress-reads-a-stage-line ()
+  (should (equal (ps/info-triage--parse-progress
+                  "==> Downloading new and edited items")
+                 '(:stage "Downloading new and edited items"))))
+
+(ert-deftest ps/info-triage--parse-progress-cuts-a-stage-at-its-commentary ()
+  "The rest of such a line is for someone reading the whole log."
+  (should (equal (ps/info-triage--parse-progress
+                  "==> Looking for possible neighbours of 5 items — the queue above is ready now")
+                 '(:stage "Looking for possible neighbours of 5 items"))))
+
+(ert-deftest ps/info-triage--parse-progress-reads-a-counted-line ()
+  "`_progress' pads the count to the width of the total."
+  (should (equal (ps/info-triage--parse-progress "    [3/12] 2026-08-14_146")
+                 '(:done 3 :total 12)))
+  (should (equal (ps/info-triage--parse-progress "    [ 3/12] 2026-08-14_146")
+                 '(:done 3 :total 12))))
+
+(ert-deftest ps/info-triage--parse-progress-ignores-everything-else ()
+  (should-not (ps/info-triage--parse-progress "Removed processed item: info/x revision 2"))
+  (should-not (ps/info-triage--parse-progress "    a label with no count"))
+  (should-not (ps/info-triage--parse-progress "")))
+
+(ert-deftest ps/info-triage--status-after-line-starts-each-stage-at-no-count ()
+  "A count left over from the stage before would be a lie about this one."
+  (let* ((status '(:state running :action sync))
+         (status (ps/info-triage--status-after-line status "==> First"))
+         (status (ps/info-triage--status-after-line status "    [2/5] x")))
+    (should (equal (plist-get status :stage) "First"))
+    (should (equal (plist-get status :done) 2))
+    (should (equal (plist-get status :total) 5))
+    (let ((next (ps/info-triage--status-after-line status "==> Second")))
+      (should (equal (plist-get next :stage) "Second"))
+      (should-not (plist-get next :total))
+      (should (eq (plist-get next :action) 'sync)))
+    (should (eq (ps/info-triage--status-after-line status "noise") status))))
+
+(ert-deftest ps/info-triage--status-label-in-full ()
+  (should-not (ps/info-triage--status-label '(:state idle)))
+  (should (equal (ps/info-triage--status-label '(:state running :action sync))
+                 "Syncing"))
+  (should (equal (ps/info-triage--status-label
+                  '(:state running :action sync :stage "Downloading" :done 3 :total 12))
+                 "Syncing · Downloading · 3/12"))
+  (should (equal (ps/info-triage--status-label
+                  '(:state failed :action sync :detail "it broke"))
+                 "Sync failed · it broke"))
+  (let ((now (current-time)))
+    (should (equal (ps/info-triage--status-label
+                    (list :state 'done :action 'sync :finished now :new 3))
+                   (concat "Synced " (format-time-string "%H:%M" now) " · 3 new")))
+    (should (equal (ps/info-triage--status-label
+                    (list :state 'done :action 'sync :finished now :new 0))
+                   (concat "Synced " (format-time-string "%H:%M" now) " · nothing new")))
+    (should (equal (ps/info-triage--status-label
+                    (list :state 'done :action 'regenerate :finished now :new 0))
+                   (concat "Rebuilt " (format-time-string "%H:%M" now))))))
+
+(ert-deftest ps/info-triage--status-label-compact-says-only-what-is-news ()
+  "The file tree's mode line is narrow, and a marker that is always there
+stops being read."
+  (should-not (ps/info-triage--status-label '(:state idle) t))
+  (should (equal (ps/info-triage--status-label
+                  '(:state running :action sync :stage "Downloading" :done 3 :total 12) t)
+                 "⇣"))
+  (should (equal (ps/info-triage--status-label '(:state failed :detail "x") t) "⇣!"))
+  (should (equal (ps/info-triage--status-label '(:state done :new 3) t) "⇣3"))
+  (should-not (ps/info-triage--status-label '(:state done :new 0) t))
+  (should-not (ps/info-triage--status-label '(:state done :new 3 :seen t) t)))
+
+(ert-deftest ps/info-triage--mark-seen-clears-the-new-items-marker ()
+  (let ((ps/info-triage--status (list :state 'done :action 'sync :new 2)))
+    (should (ps/info-triage--modeline))
+    (ps/info-triage--mark-seen)
+    (should-not (ps/info-triage--modeline)))
+  ;; A failure is not something looking at the queue resolves.
+  (let ((ps/info-triage--status (list :state 'failed :detail "x")))
+    (ps/info-triage--mark-seen)
+    (should (ps/info-triage--modeline))))
+
+(ert-deftest ps/info-triage--failure-hint-names-the-macos-permission ()
+  "The script's ssh is attributed to Emacs, so the same command that works in
+a terminal fails here until Emacs is granted Local Network access."
+  (let ((output "==> Reading server item revisions
+ssh: connect to host 192.168.1.234 port 22: No route to host
+Command '['ssh', 'nas', 'test -d /x']' returned non-zero exit status 255.\n"))
+    (should (string-match-p "Local Network"
+                            (ps/info-triage--failure-hint output 'darwin)))
+    (should-not (ps/info-triage--failure-hint output 'gnu/linux))
+    (should-not (ps/info-triage--failure-hint "Permission denied" 'darwin))))
+
+(ert-deftest ps/info-triage--failure-detail-falls-back-to-the-last-line ()
+  (should (equal (ps/info-triage--failure-detail "==> Stage\nfirst\n  the reason  \n\n")
+                 "the reason"))
+  (should (equal (ps/info-triage--failure-detail "") "no output")))
+
+(ert-deftest ps/info-triage--header-line-escapes-percent-signs ()
+  "The failure line is the script's own text and the header line is a
+mode-line construct."
+  (let ((ps/info-triage--status '(:state failed :action sync :detail "disk 100% full"))
+        (ps/info-triage-directory "/nowhere/at/all/"))
+    (should (string-match-p "100%% full" (ps/info-triage--header-line)))
+    (should (string-match-p "Retry" (ps/info-triage--header-line)))))
+
+(ert-deftest ps/info-triage-drop-refuses-while-a-sync-runs ()
+  "Renumbering is the same script, so the directory must not go first."
+  (ps/info-triage-test--in-queue
+    (ps/info-triage-test--goto 1)
+    (cl-letf (((symbol-function 'ps/info-triage--busy-p) (lambda () t))
+              ((symbol-function 'delete-directory)
+               (lambda (&rest _) (error "Deleted anyway"))))
+      (should-error (ps/info-triage-drop) :type 'user-error))))
+
+;;; -------------------------------------------------------
 ;;; The queue buffer
 ;;; -------------------------------------------------------
+
+(ert-deftest ps/info-triage-mode-puts-the-sync-status-on-the-header-line ()
+  (ps/info-triage-test--in-queue
+    (ps/info-triage-mode 1)
+    (should header-line-format)
+    (ps/info-triage-mode -1)
+    (should-not header-line-format)))
 
 (ert-deftest ps/info-triage-mode-makes-the-queue-read-only ()
   "It is regenerated wholesale on every sync, so anything typed here is lost

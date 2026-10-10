@@ -24,7 +24,8 @@ worked through, and a rule for what belongs in a plan.
 a phone, extracts it on a home server, and delivers one folder per item to the
 laptop, with two generated views of the queue: `triage.md` for an agent and
 `triage.org` for the person. This configuration only reads that queue, and hides
-the feature entirely when the inbox folder does not exist.
+the feature entirely when the inbox folder does not exist and no sync script is
+named — the script alone is enough, because the first sync creates the inbox.
 
 **Act, Keep or Drop, decided by intent, not size.** The Org plans hold what you
 will *do* (the verb); only those items reach the agenda. What you want to find
@@ -48,6 +49,17 @@ listing. Following an item opens it beside the queue, which keeps its window
 ([windows.md](../files-and-windows/windows.md)). Deleting an item's folder is
 what "processed" means, and it goes to the Trash.
 
+**A sync reports on the queue's header line, and as a marker in the file tree's
+mode line.** A sync runs for minutes and the echo area is wiped by the next
+keystroke, so its state is kept and drawn: in full, with the Sync / Log / Retry
+buttons, on the header line of the queue, which is where you are when you start
+one; and as one glyph (`⇣`, `⇣3`, `⇣!`) in the file tree's mode line, which is
+the one place on screen whatever buffer is selected and already carries the
+git-sync status. That mode line is as narrow as the tree, so the marker shows
+only news — nothing when idle, nothing after a sync that brought nothing — and
+the words are in its tooltip. Progress is parsed from what the script already
+prints rather than from a new interface.
+
 **Item content stays in Markdown; Org is used only to navigate.** Extracted text
 is not safe inside Org markup, so the queue is an Org outline of links, and the
 item itself is `index.md` in its folder.
@@ -66,6 +78,13 @@ anything typed on the laptop, and are filed through the same decision step.
   heading per day, items at level two, numbers global across days, and each
   item's folder recoverable only from its `directory` link
   (`ps/info-triage--item-directory` is the one place this side depends on it).
+- **The sync script's progress lines are part of the same contract**: `==> Stage`
+  and `    [3/12] label`, printed per item only when its output is a pipe, and
+  only promptly when Python is unbuffered — see the Commentary of
+  `lisp/ps-info-triage.el`.
+- **On macOS the script's network access is Emacs's.** Its `ssh` to the server is
+  attributed to the app that spawned it, so Emacs needs Local Network access, and
+  loses it on every rebuild ([macos.md](../platform/macos.md)).
 - **Keywords stay at four letters or fewer**, so an inbox state cannot be a new
   keyword such as `INBOX`.
 - **`Inbox.org` is scanned by the agenda**, like any plan file, so what sits in it
@@ -84,6 +103,12 @@ anything typed on the laptop, and are filed through the same decision step.
 - **Reviewing on a tablet or in a web app.** The review happens in Emacs, beside
   the agent that files.
 - **A separate reading-queue file** for long reads.
+- **Running the sync in a terminal window.** It takes a window on every routine
+  sync, cannot reload the queue when it ends, and shows nothing the parsed lines
+  do not; the script's output is kept in a log buffer one click away instead.
+- **A live counter in the file tree's mode line.** There is no room for it, and a
+  number that changes every second in the corner of the eye is worse than a
+  glyph that appears and goes.
 
 ## Not built yet
 

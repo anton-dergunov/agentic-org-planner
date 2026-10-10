@@ -128,6 +128,13 @@ the hard way:
 - **`mouse-position` is a cross-process call**, so how often it runs matters.
 - **During a live resize, the NS port replaces the frame title with the grid
   size.** `emacs-30-ns-resize-title.patch` removes that; it is cosmetic.
+- **A subprocess's access to the local network is Emacs's.** macOS attributes a
+  child's connections to the app that spawned it, so `ssh` to a machine on the
+  LAN started from Emacs needs Emacs to hold Local Network access (System
+  Settings → Privacy & Security). Without it the connection fails with "No route
+  to host" while the same command works in a terminal. The grant is tied to the
+  code signature, so every rebuild of emacs-plus drops it. The Info Triage sync
+  is what meets this; it names the permission when it fails that way.
 - **Homebrew builds emacs-plus with `-Os`.** For `-O2`, add `cflags << "-O2"`
   near the top of the `cflags` list in
   `$(brew --repository)/Library/Taps/d12frosted/homebrew-emacs-plus/Formula/emacs-plus@30.rb`;

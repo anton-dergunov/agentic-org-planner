@@ -15,7 +15,8 @@ covers the Emacs half — reading the queue, looking at what an item actually co
 throwing away what is not worth keeping.
 
 *This whole feature is optional.* If the inbox folder does not exist on your
-machine, the Triage menu is not shown at all and nothing here applies. To try it
+machine and no sync script is set, the Triage menu is not shown at all and
+nothing here applies. To try it
 without the pipeline, point =ps/info-triage-directory= at the small sample queue
 in =samples/info-triage/info/=.
 
@@ -24,10 +25,11 @@ in =samples/info-triage/info/=.
 
 * The daily loop
 
-1. *Productivity → Triage → Sync Now.* Fetches whatever arrived since last
-   time, and tells the server about anything you dropped here.
-2. *Productivity → Triage → Open Inbox* (=C-c p I=). The queue opens as one
-   line per item, oldest first.
+1. *Productivity → Triage → Sync Now.* Opens the queue and fetches whatever
+   arrived since last time, and tells the server about anything you dropped
+   here. The line at the top of the queue shows how far it has got.
+2. The queue is one line per item, oldest first. *Productivity → Triage → Open
+   Inbox* (=C-c p I=) brings it back without syncing.
 3. Read down the list. Click an item's label to see what was captured, or its
    =directory= to look through the files themselves. One click is enough.
 4. Press =d= on anything not worth keeping. It goes to the Trash, and the list
@@ -63,6 +65,32 @@ between the label and the links.
 The =·= line beneath carries the rest: =directory= opens the item's folder, and
 =source= opens the page it came from in your browser.
 
+** Watching a sync
+
+A sync takes a while — after the download it looks every item up in your notes
+and paper library — so it runs in the background and reports in two places.
+
+The line at the top of the queue says what it is doing and what you can do next:
+
+: Syncing · Downloading new and edited items · 3/12   Log
+: Synced 14:32 · 3 new   Sync
+: Sync failed · …   Log  Retry
+
+=Sync= and =Retry= start a sync, =Log= shows everything the sync script printed.
+The list reloads by itself when the sync finishes.
+
+When you have gone to another file meanwhile, a small marker at the bottom of
+the file tree, beside the git-sync status, keeps you posted: =⇣= while a sync
+is running, =⇣3= when it has finished and three new items are waiting, =⇣!=
+when it failed. Hover over it for the details; click it to go to the queue (or
+to the log, after a failure). The count goes away once you have looked at the
+queue, and nothing is shown at all when a sync brought nothing new.
+
+Only one sync runs at a time, and =d= waits for it to finish.
+
+*The first time*, there is no queue yet: Open Inbox offers to sync, and the
+queue opens when the sync has made it.
+
 ** Keys in the queue
 
 The queue is read-only (it is rebuilt on every sync), so single keys act on it:
@@ -94,11 +122,19 @@ Audio is not opened at all — the transcript beside it is the readable copy. An
 item whose payload is twenty photos is one a file browser handles better: =e=
 (Productivity → Triage → Open Item Externally) hands the folder to VS Code.
 
+* Troubleshooting
+
+*Sync fails with "No route to host"* although the same script works from a
+terminal. On macOS, Emacs needs permission to reach machines on your own
+network: System Settings → Privacy & Security → Local Network, switch Emacs on,
+then restart Emacs. The permission is lost when Emacs is reinstalled or
+rebuilt, so this can come back after an upgrade.
+
 * Under the hood / Customize
 
 - The Triage menu lives under Productivity and is =config.org= → /Productivity
   menu + prefix keys/. It is hidden entirely when =ps/info-triage-directory=
-  does not exist.
+  does not exist and =ps/info-triage-sync-script= is not set.
 - The queue, the sync commands and the drop are =lisp/ps-info-triage.el=.
   Settings — where the inbox is, which program =e= hands a folder to, whether
   items open beside the queue — are in =config.org= → /Settings → Info triage/

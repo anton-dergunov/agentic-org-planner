@@ -31,6 +31,25 @@
 ;; number here and quotes it to an agent that reads the other file.  Removing a
 ;; directory renumbers everything after it, so the views must be rebuilt
 ;; together -- which is what `sync.sh --regenerate' exists for.
+;;
+;; A sync is watched by reading the script's own output, which makes two more
+;; line shapes part of the contract with info_triage/sync.py: `==> Stage' opens
+;; a stage (`synchronize' and the annotation passes print these), and
+;; `    [3/12] label' counts through one (`_progress', which prints a line per
+;; item when its output is not a terminal -- so the process must stay on a pipe,
+;; never a pty).  `ps/info-triage--parse-progress' is the one place that reads
+;; them.  The state they build is drawn twice from one label function: in full
+;; on the queue's header line, and as a marker of a few characters in the file
+;; tree's mode line, which is on screen whatever buffer is selected.  The echo
+;; area is not enough on its own -- the next keystroke wipes it, and a sync
+;; outlasts that by minutes.
+;;
+;; On macOS the script's `ssh' to the server is attributed to Emacs, so it is
+;; Emacs that needs Local Network access (System Settings, Privacy & Security).
+;; Without it the connection fails with "No route to host" while the very same
+;; command works from a terminal, and the grant is lost whenever Emacs is
+;; rebuilt, since it is tied to the code signature.
+;; `ps/info-triage--failure-hint' turns that message into the thing to do.
 
 ;;; Code:
 
@@ -40,6 +59,7 @@
 (require 'ps-open)
 
 (declare-function ps/window-replace-here "ps-window")
+(declare-function ps/window-show-here "ps-window")
 (declare-function ps/window-visit-here "ps-window")
 (declare-function ps/window--select-main "ps-window")
 (declare-function ps/nav-back "ps-nav")
@@ -66,8 +86,9 @@ consumed by scripts.  Point it at another route's directory to work that one
 instead; nothing else here needs to change, because an item's `directory' link
 is relative to the queue that lists it.
 
-Everything in this feature is hidden when it does not exist, so a machine
-without the info-triage project never sees a menu for it."
+Everything in this feature is hidden when it does not exist and no sync
+script is set either, so a machine without the info-triage project never sees
+a menu for it."
   :type 'directory
   :group 'ps/info-triage)
 
@@ -127,8 +148,12 @@ after this one rather than another item.")
 
 ;;;###autoload
 (defun ps/info-triage-available-p ()
-  "Non-nil when this machine has an info-triage inbox to work with."
-  (file-directory-p ps/info-triage-directory))
+  "Non-nil when this machine has an info-triage inbox to work with.
+Either the inbox is there, or `ps/info-triage-sync-script' says where to get
+one from: the first sync creates the inbox, so requiring it up front would
+hide the only command that can make it."
+  (or (file-directory-p ps/info-triage-directory)
+      (and ps/info-triage-sync-script t)))
 
 (defun ps/info-triage-queue-buffer-p (&optional buffer)
   "Non-nil when BUFFER (default current) is visiting the generated queue."
@@ -192,6 +217,199 @@ index, so it is reduced to the text that is actually on screen."
                     (directory-files-recursively path "" nil))))
     (format "%d file%s" (length files) (if (= (length files) 1) "" "s"))))
 
+;;; Sync status
+
+(defconst ps/info-triage--log-buffer "*info-triage sync*"
+  "Name of the buffer holding the sync script's output.")
+
+(defvar ps/info-triage--status '(:state idle)
+  "What the sync script is doing or last did, as a plist.
+`:state' is `idle', `running', `done' or `failed'; `:action' is `sync' or
+`regenerate'.  While running, `:stage' names the stage and `:done'/`:total'
+count through it.  Afterwards `:finished' is the time, `:new' the number of
+items that arrived, `:seen' whether the queue has been looked at since, and
+`:detail' the reason for a failure.")
+
+(defvar ps/info-triage--process nil
+  "The running sync process, if any.")
+
+(defun ps/info-triage--busy-p ()
+  "Non-nil while the sync script is running."
+  (process-live-p ps/info-triage--process))
+
+(defun ps/info-triage--parse-progress (line)
+  "Return what LINE of the sync script's output reports, or nil.
+A stage line gives (:stage NAME), a counted line (:done N :total M).  The
+stage is cut at its first dash: what follows is commentary for someone
+reading the whole log."
+  (cond
+   ((string-match "\\`==> \\(.+\\)" line)
+    (list :stage (string-trim (car (split-string (match-string 1 line) " — ")))))
+   ((string-match "\\` +\\[ *\\([0-9]+\\)/\\([0-9]+\\)\\]" line)
+    (list :done (string-to-number (match-string 1 line))
+          :total (string-to-number (match-string 2 line))))))
+
+(defun ps/info-triage--status-after-line (status line)
+  "Return STATUS updated by LINE of the sync script's output.
+A new stage starts its own count."
+  (let ((progress (ps/info-triage--parse-progress line)))
+    (cond
+     ((plist-member progress :stage)
+      (list :state 'running :action (plist-get status :action)
+            :stage (plist-get progress :stage)))
+     (progress
+      (plist-put (plist-put (copy-sequence status)
+                            :done (plist-get progress :done))
+                 :total (plist-get progress :total)))
+     (t status))))
+
+(defun ps/info-triage--failure-hint (output &optional system)
+  "Return what to do about the failure in OUTPUT, or nil when it is not known.
+SYSTEM defaults to `system-type'.  See this file's Commentary for why a
+network failure on macOS is usually a missing permission."
+  (when (and (eq (or system system-type) 'darwin)
+             (string-match-p "No route to host" output))
+    "Emacs may lack Local Network access (System Settings → Privacy & Security → Local Network)"))
+
+(defun ps/info-triage--failure-detail (output)
+  "Return one line saying why the sync that printed OUTPUT failed."
+  (or (ps/info-triage--failure-hint output)
+      (car (last (split-string output "[\n\r]+" t "[ \t]+")))
+      "no output"))
+
+(defun ps/info-triage--format-time (time)
+  "Return TIME as a clock time, with the date when it is not today."
+  (format-time-string
+   (if (equal (format-time-string "%F" time) (format-time-string "%F"))
+       "%H:%M"
+     "%-d %b %H:%M")
+   time))
+
+(defun ps/info-triage--status-label (status &optional compact)
+  "Return the text describing STATUS, or nil when there is nothing to say.
+In full it is a sentence for the queue's header line.  COMPACT is the marker
+for the file tree's mode line, which has room for a few characters: an arrow
+while running, the arrow and the number of new items once they have arrived
+and until the queue is looked at, the arrow and `!' after a failure."
+  (let ((state (plist-get status :state))
+        (syncing (not (eq (plist-get status :action) 'regenerate)))
+        (new (or (plist-get status :new) 0)))
+    (if compact
+        (pcase state
+          ('running "⇣")
+          ('failed "⇣!")
+          ('done (and (> new 0) (not (plist-get status :seen))
+                      (format "⇣%d" new))))
+      (pcase state
+        ('running
+         (concat (if syncing "Syncing" "Rebuilding the list")
+                 (when-let* ((stage (plist-get status :stage)))
+                   (concat " · " stage))
+                 (when-let* ((total (plist-get status :total)))
+                   (format " · %d/%d" (plist-get status :done) total))))
+        ('failed
+         (format "%s failed · %s" (if syncing "Sync" "Rebuild")
+                 (plist-get status :detail)))
+        ('done
+         (concat (if syncing "Synced " "Rebuilt ")
+                 (ps/info-triage--format-time (plist-get status :finished))
+                 (when syncing
+                   (if (> new 0) (format " · %d new" new) " · nothing new"))))))))
+
+(defun ps/info-triage--item-names ()
+  "Return the names of the item directories in the inbox."
+  (when (file-directory-p ps/info-triage-directory)
+    (seq-filter (lambda (name)
+                  (file-directory-p
+                   (expand-file-name name ps/info-triage-directory)))
+                (directory-files ps/info-triage-directory nil "\\`[^.]"))))
+
+(defun ps/info-triage--set-status (status)
+  "Make STATUS current and redraw everything that shows it."
+  (setq ps/info-triage--status status)
+  (force-mode-line-update t))
+
+(defun ps/info-triage--mark-seen (&rest _)
+  "Record that the queue has been looked at since the last sync.
+That is what takes the new-items marker off the file tree's mode line."
+  (when (and (eq (plist-get ps/info-triage--status :state) 'done)
+             (not (plist-get ps/info-triage--status :seen)))
+    (ps/info-triage--set-status
+     (plist-put (copy-sequence ps/info-triage--status) :seen t))))
+
+;;;###autoload
+(defun ps/info-triage-show-log ()
+  "Show the sync script's output."
+  (interactive)
+  (display-buffer (get-buffer-create ps/info-triage--log-buffer)))
+
+(defun ps/info-triage--button (label command help)
+  "Return LABEL as a header-line button running COMMAND, with tooltip HELP."
+  (propertize label
+              'face 'link
+              'mouse-face 'header-line-highlight
+              'help-echo (concat "mouse-1: " help)
+              'local-map (let ((map (make-sparse-keymap)))
+                           (define-key map [header-line mouse-1] command)
+                           map)))
+
+(defun ps/info-triage--header-line ()
+  "Return the queue's header line: the sync status, and what can be done next."
+  (let* ((status ps/info-triage--status)
+         (state (plist-get status :state))
+         (label (or (ps/info-triage--status-label status)
+                    ;; Nothing has run in this session; the file still says
+                    ;; when the list was last written.
+                    (if-let* ((attributes (file-attributes (ps/info-triage-queue-file))))
+                        (concat "Updated "
+                                (ps/info-triage--format-time
+                                 (file-attribute-modification-time attributes)))
+                      "Not synced yet")))
+         (log (ps/info-triage--button "Log" #'ps/info-triage-show-log
+                                      "show the sync script's output"))
+         (sync (lambda (text)
+                 (ps/info-triage--button text #'ps/info-triage-sync
+                                         "fetch new captures"))))
+    (concat " "
+            ;; A `%' in the script's output is not a mode-line construct.
+            (replace-regexp-in-string "%" "%%" label t t)
+            "   "
+            (pcase state
+              ('running log)
+              ('failed (concat log "  " (funcall sync "Retry")))
+              (_ (funcall sync "Sync"))))))
+
+(defvar ps/info-triage--modeline-map
+  (let ((map (make-sparse-keymap)))
+    ;; mouse-1 only, like the git-sync indicator beside it.
+    (define-key map [mode-line mouse-1] #'ps/info-triage-modeline-click)
+    map)
+  "Keymap on the sync marker in the file tree's mode line.")
+
+(defun ps/info-triage-modeline-click ()
+  "Go to what the sync marker is about: the log after a failure, else the queue."
+  (interactive)
+  (if (or (eq (plist-get ps/info-triage--status :state) 'failed)
+          (not (file-exists-p (ps/info-triage-queue-file))))
+      (ps/info-triage-show-log)
+    (ps/info-triage-open)))
+
+(defun ps/info-triage--modeline ()
+  "Return the sync marker for the file tree's mode line, or nil.
+Rendered by `ps/file-tree--modeline'.  The words are in the tooltip: that
+mode line is as narrow as the tree."
+  (when-let* ((label (ps/info-triage--status-label ps/info-triage--status t)))
+    (let ((face (pcase (plist-get ps/info-triage--status :state)
+                  ('failed 'warning)
+                  ('done 'mode-line-emphasis))))
+      (apply #'propertize label
+             'help-echo (concat "Info Triage: "
+                                (ps/info-triage--status-label ps/info-triage--status)
+                                "\nmouse-1: open")
+             'mouse-face 'mode-line-highlight
+             'local-map ps/info-triage--modeline-map
+             (when face (list 'face face))))))
+
 ;;; Commands
 
 ;;;###autoload
@@ -201,9 +419,16 @@ index, so it is reduced to the text that is actually on screen."
   (unless (ps/info-triage-available-p)
     (user-error "No info-triage inbox at %s" ps/info-triage-directory))
   (let ((file (ps/info-triage-queue-file)))
-    (unless (file-exists-p file)
-      (user-error "No %s yet -- synchronize first" ps/info-triage-queue-name))
-    (ps/window-visit-here file)))
+    (cond
+     ((file-exists-p file) (ps/window-visit-here file))
+     ;; The first run: there is nothing to open until a sync has made it, and
+     ;; that sync opens the queue itself when it lands.
+     ((and ps/info-triage-sync-script
+           (y-or-n-p (format "No %s yet -- synchronize now? "
+                             ps/info-triage-queue-name)))
+      (ps/info-triage-sync))
+     (t (user-error "No %s yet -- synchronize first"
+                    ps/info-triage-queue-name)))))
 
 (defun ps/info-triage--revert-queue ()
   "Reload the queue buffer if it is open, keeping the item you were reading.
@@ -223,43 +448,101 @@ was processed."
           (re-search-forward (format "^\\*\\* %s " (regexp-quote number)) nil t)
           (beginning-of-line))))))
 
+(defun ps/info-triage--filter (process chunk)
+  "Append CHUNK of PROCESS's output to the log and read its progress lines."
+  (when (buffer-live-p (process-buffer process))
+    (with-current-buffer (process-buffer process)
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (goto-char (process-mark process))
+          (insert chunk)
+          (set-marker (process-mark process) (point))))
+      ;; A log being watched follows the output.
+      (dolist (window (get-buffer-window-list nil nil t))
+        (set-window-point window (process-mark process)))))
+  ;; Output arrives in arbitrary pieces, so the unfinished last line waits for
+  ;; the rest of itself.
+  (let ((lines (split-string (concat (process-get process 'partial) chunk) "\n"))
+        (status ps/info-triage--status))
+    (process-put process 'partial (car (last lines)))
+    (dolist (line (butlast lines))
+      (setq status (ps/info-triage--status-after-line status line)))
+    (unless (eq status ps/info-triage--status)
+      (ps/info-triage--set-status status))))
+
 (defun ps/info-triage--run (arguments on-success)
   "Run the sync script with ARGUMENTS, then call ON-SUCCESS.
-Asynchronous and quiet: the output buffer is only shown when the script
-fails, so a routine sync does not take a window away from what you were
-reading."
+Asynchronous and quiet: progress goes to `ps/info-triage--status', and the
+output buffer is only shown when the script fails, so a routine sync does not
+take a window away from what you were reading."
   (unless ps/info-triage-sync-script
     (user-error "Set `ps/info-triage-sync-script' in local.el to the pipeline's sync.sh"))
   (unless (file-executable-p ps/info-triage-sync-script)
     (user-error "Not executable: %s" ps/info-triage-sync-script))
-  (let ((output (get-buffer-create "*info-triage sync*")))
+  (when (ps/info-triage--busy-p)
+    (user-error "Info Triage is already running -- see the queue's header line"))
+  (let ((output (get-buffer-create ps/info-triage--log-buffer))
+        (action (if arguments 'regenerate 'sync))
+        (before (ps/info-triage--item-names))
+        ;; Python buffers a pipe by the block, which would hold every stage
+        ;; line back until the script exits.
+        (process-environment (cons "PYTHONUNBUFFERED=1" process-environment)))
     (with-current-buffer output
       (let ((inhibit-read-only t)) (erase-buffer)))
-    (message "Info Triage: %s…" (if arguments "regenerating" "synchronizing"))
-    (make-process
-     :name "ps-info-triage-sync"
-     :buffer output
-     :noquery t
-     ;; Through a login shell, not directly: the script runs `uv', and a
-     ;; Finder-launched Emacs inherits a PATH that does not have it.
-     :command (list shell-file-name "-lc"
-                    (mapconcat #'shell-quote-argument
-                               (cons ps/info-triage-sync-script arguments) " "))
-     :sentinel
-     (lambda (process _event)
-       (when (memq (process-status process) '(exit signal))
-         (if (zerop (process-exit-status process))
-             (progn (funcall on-success)
-                    (message "Info Triage: done"))
-           (display-buffer output)
-           (message "Info Triage: %s failed -- see *info-triage sync*"
-                    ps/info-triage-sync-script)))))))
+    (ps/info-triage--set-status (list :state 'running :action action))
+    (setq ps/info-triage--process
+          (make-process
+           :name "ps-info-triage-sync"
+           :buffer output
+           :noquery t
+           ;; A pipe, not a pty: on a terminal the script rewrites one progress
+           ;; line in place instead of printing a line per item.
+           :connection-type 'pipe
+           ;; Through a login shell, not directly: the script runs `uv', and a
+           ;; Finder-launched Emacs inherits a PATH that does not have it.
+           :command (list shell-file-name "-lc"
+                          (mapconcat #'shell-quote-argument
+                                     (cons ps/info-triage-sync-script arguments) " "))
+           :filter #'ps/info-triage--filter
+           :sentinel
+           (lambda (process _event)
+             (when (memq (process-status process) '(exit signal))
+               (if (zerop (process-exit-status process))
+                   (let ((new (seq-difference (ps/info-triage--item-names) before)))
+                     (ps/info-triage--set-status
+                      (list :state 'done :action action
+                            :finished (current-time)
+                            :new (if (eq action 'sync) (length new) 0)))
+                     (funcall on-success)
+                     (message "Info Triage: %s"
+                              (ps/info-triage--status-label ps/info-triage--status)))
+                 (let ((detail (ps/info-triage--failure-detail
+                                (with-current-buffer output (buffer-string)))))
+                   (ps/info-triage--set-status
+                    (list :state 'failed :action action :detail detail))
+                   (display-buffer output)
+                   (message "Info Triage: %s"
+                            (ps/info-triage--status-label
+                             ps/info-triage--status))))))))))
 
 ;;;###autoload
 (defun ps/info-triage-sync ()
-  "Fetch new captures from the NAS and propagate anything dropped here."
+  "Fetch new captures from the NAS and propagate anything dropped here.
+The queue is brought up to watch it from: its header line shows the progress.
+On the first run there is no queue to bring up, so it opens when it lands."
   (interactive)
-  (ps/info-triage--run nil #'ps/info-triage--revert-queue))
+  (let* ((file (ps/info-triage-queue-file))
+         (first-run (not (file-exists-p file))))
+    (ps/info-triage--run
+     nil
+     (lambda ()
+       (ps/info-triage--revert-queue)
+       (when (and first-run (file-exists-p file))
+         (ps/info-triage-open))))
+    (unless (or first-run
+                (when-let* ((buffer (find-buffer-visiting file)))
+                  (get-buffer-window buffer)))
+      (ps/info-triage-open))))
 
 ;;;###autoload
 (defun ps/info-triage-regenerate ()
@@ -278,6 +561,10 @@ processed, so the next synchronization removes the NAS copy too.  It goes to
 the Trash rather than being unlinked because the decision is a judgement made
 at a glance, and a glance is sometimes wrong."
   (interactive)
+  ;; Before anything is removed, not after: the renumbering below is the same
+  ;; script, and a directory deleted without it leaves the two views disagreeing.
+  (when (ps/info-triage--busy-p)
+    (user-error "Info Triage is still running -- drop the item when it finishes"))
   (let* ((path (ps/info-triage--item-path))
          (number (ps/info-triage--item-number))
          (label (ps/info-triage--item-label)))
@@ -406,6 +693,13 @@ bindings."
   :lighter " Triage"
   :keymap ps/info-triage-mode-map
   (setq buffer-read-only (and ps/info-triage-mode t))
+  ;; The sync status, and the buttons that go with it.
+  (setq header-line-format
+        (and ps/info-triage-mode '(:eval (ps/info-triage--header-line))))
+  ;; Buffer-local, so it runs when a window starts showing *this* buffer.
+  (if ps/info-triage-mode
+      (add-hook 'window-buffer-change-functions #'ps/info-triage--mark-seen nil t)
+    (remove-hook 'window-buffer-change-functions #'ps/info-triage--mark-seen t))
   ;; A click here follows a link and nothing else -- the RET behaviour of
   ;; opening the item at point when there is no link would mean clicking
   ;; anywhere at all opened something.

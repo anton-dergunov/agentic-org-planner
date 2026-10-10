@@ -473,8 +473,8 @@ an image wherever the icon font is installed.
 
 ** Info triage (ps-info-triage.el)
 The capture inbox produced by the separate =info-triage= project. The Triage
-menu and everything under it appear only when this directory exists, so a
-machine without that project never sees them.
+menu and everything under it appear only when this directory exists or the
+sync script below is set, so a machine without that project never sees them.
 
 =ps/info-triage-directory= must name the route's own subdirectory of
 =~/info-triage-inbox/= that the sync script pulls into — =info/= is the
@@ -3022,8 +3022,9 @@ calendar boundary containing the start day (e.g. the whole current week)."
       ;; The capture inbox from the separate =info-triage= project.  `:visible'
       ;; on a nested submenu is folded into its `menu-item' and re-evaluated
       ;; every time the menu opens, so the whole thing is simply absent on a
-      ;; machine that has no ~/info-triage-inbox -- this configuration is
-      ;; shared, and it must not offer a workflow for a project you do not have.
+      ;; machine with no ~/info-triage-inbox and no sync script -- this
+      ;; configuration is shared, and it must not offer a workflow for a
+      ;; project you do not have.
       ("Triage"
        :visible (ps/info-triage-available-p)
        ["Sync Now"              ps/info-triage-sync t]

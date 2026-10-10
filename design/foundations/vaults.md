@@ -67,6 +67,10 @@ names, and failing that the vault is nil.
 
 **`local.el` is only a first-run seed.** When no registry exists yet, the path
 it names becomes the first vault, and from then on the registry decides.
+The file itself is still loaded on every start, before the bootstrap, because
+it also holds the settings that differ per machine (where the capture
+pipeline is checked out, where a paper library is). Loading it only as a seed
+left those unset on every machine that already had a registry.
 `PS_ORG_BASE` pins a session to a folder without touching the registry, which
 is how the development launcher and the tests run against the sample notes.
 

@@ -17,7 +17,7 @@ Emacs at this repo and at the bundled sample Org files:
 #+end_src
 
 It uses =--init-directory= (Emacs 29+). On first run it seeds the first vault
-with =samples/realistic/= (through a =local.el=, which is read only until the
+with =samples/realistic/= (through a =local.el=, whose vault counts only until the
 vault list exists) and downloads packages into =elpa/= inside the repo.
 Background Git sync is disabled in this mode, so it never commits while you
 test.

@@ -1,11 +1,15 @@
 ;; Machine-local settings, loaded before everything else. Copy to local.el.
 ;;
-;; You do not normally need this file: vaults are chosen from the UI
-;; (Productivity → Vault, or the chip in the file tree's header line) and
-;; remembered in vaults.eld. Setting my-org-base-directory here seeds the very
-;; first vault, and is ignored once the registry exists.
+;; Vaults are chosen from the UI (Productivity → Vault, or the chip in the file
+;; tree's header line) and remembered in vaults.eld. Setting
+;; my-org-base-directory here seeds the very first vault, and is ignored once
+;; the registry exists. The other settings below are read on every start.
 (setq my-org-base-directory "<please provide the path here>")
 
 ;; Only if you use the capture inbox: where the agent-context-pipeline project
 ;; is checked out on this machine.
 ;; (setq ps/info-triage-sync-script (expand-file-name "~/path/to/agent-context-pipeline/sync.sh"))
+
+;; Only if you keep a paper library (the agentic-paper-library project): its
+;; folder, so the assistant can ask it about a paper.
+;; (setq ps/ai-context-paper-library (expand-file-name "~/path/to/papers"))

@@ -111,9 +111,8 @@ A missing file is simply left out."
   "The folder of a paper library on this machine, or nil when there is none.
 A library of the separate agentic-paper-library project, recognised by the
 `paper-library.yaml' at its root.  When it is one, the generated file tells an
-assistant to ask its `paperlib info' about a research paper.  The folder
-differs per machine, so set it with \\[customize-variable], which saves it in
-custom.el, and not in config.org."
+assistant to ask its `paperlib info' about a research paper.  Set it in
+local.el: the folder differs per machine."
   :type '(choice (const :tag "No paper library" nil) directory)
   :group 'ps-ai-context)
 

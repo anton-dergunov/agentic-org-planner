@@ -99,6 +99,11 @@ Sets =my-org-base-directory= to the vault last in use, from the registry in
 screen then offers to create one. An existing =local.el= is migrated into the
 registry once, so upgrading needs no action.
 
+=local.el= is loaded first, on every start, for the settings that differ per
+machine (where another project is checked out, where a paper library is). The
+vault it may still name is only that first-run seed: the registry decides, and
+=ps/vault-bootstrap= overwrites the variable.
+
 This runs before packages and before every other module, so it must not fail:
 =ps/vault-bootstrap= falls back to =local.el= on any error and leaves
 =default-directory= pointing somewhere real either way.
@@ -106,6 +111,11 @@ This runs before packages and before every other module, so it must not fail:
   (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
   (setq load-prefer-newer t)
   (require 'ps-vault)
+  (let ((local (expand-file-name "local.el" user-emacs-directory)))
+    (when (file-readable-p local)
+      (condition-case error
+          (load local nil t)
+        (error (message "local.el: %s" (error-message-string error))))))
   (ps/vault-bootstrap)
 #+end_src
 
@@ -1069,9 +1079,8 @@ at the top of the generated file so every vault gets the current version; nil
 means =agent/guide.md= in this config.
 
 =ps/ai-context-paper-library=, the folder of a paper library (the separate
-=agentic-paper-library= project), is not set here, because it lives somewhere
-different on each machine: set it with =M-x customize-variable=, which saves it
-in =custom.el=. With it set, the generated file
+=agentic-paper-library= project), is set in =local.el= and not here, because it
+lives somewhere different on each machine. With it set, the generated file
 tells the assistant to ask =paperlib info= about a research paper; without it
 nothing about papers is said.
 

@@ -168,8 +168,7 @@ set =ps/claude-no-exit-prompt= to =nil= to get the confirmation back.
   /Settings → AI context sync (ps-ai-context.el)/ — =ps/ai-context-enabled=,
   =ps/ai-context-file=, =ps/ai-context-guide-file=,
   =ps/ai-context-next-keyword=, =ps/ai-context-save-debounce=.
-  =ps/ai-context-paper-library= is machine-local: set it with
-  =M-x customize-variable=. The general
+  =ps/ai-context-paper-library= is machine-local and goes in =local.el=. The general
   rules themselves are =agent/guide.md=.
 - The starter =AGENTS.md=: =lisp/ps-vault.el= (=ps/vault-scaffold=).
 - The skills: =skills/= (one folder per skill); linked by =lisp/ps-skills.el=;

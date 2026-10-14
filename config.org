@@ -1081,7 +1081,8 @@ means =agent/guide.md= in this config.
 =ps/ai-context-paper-library=, the folder of a paper library (the separate
 =agentic-paper-library= project), is set in =local.el= and not here, because it
 lives somewhere different on each machine. With it set, the generated file
-tells the assistant to ask =paperlib info= about a research paper; without it
+tells the assistant to ask =paperlib info= about a research paper, and which
+=paperlib= commands add one; without it
 nothing about papers is said.
 
 =ps/ai-context-next-keyword= names the TODO keyword the agenda gathers into its

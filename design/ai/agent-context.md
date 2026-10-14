@@ -168,7 +168,9 @@ agentic-paper-library project). This is in the generated file and not in a skill
 purpose: a paper turns up in a chat, in `Inbox.org` or in an old task as often as in
 the capture inbox, and a session that runs no skill must still know that one
 `paperlib info` call answers "do I have this, and how good is it" more cheaply than a
-search and a fetch. The section is about 90 tokens and is absent without the setting,
+search and a fetch. It also names the commands that add a paper (`add` for arXiv,
+`add-web` plus `set-summary` for a web article), because an agent asked to add one
+otherwise spends a call on `paperlib --help` first. The section is about 200 tokens and is absent without the setting,
 so a vault with no paper library pays nothing. The capture pipeline asks the same
 command at sync and writes the answer into the item, which `/route` reads instead of
 asking again; the two integrations do not depend on each other.

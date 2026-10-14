@@ -379,7 +379,15 @@ assistant reads here, so the meanings cannot drift from the config. Pure."
      "`paperlib -C " (shell-quote-argument library) " info <arXiv id or URL | title words>`\n"
      "before searching or fetching: one call, saved after the first. `--json` adds the\n"
      "abstract. It reports and never recommends. A capture-inbox item about a paper\n"
-     "already carries this as `## Paper library`.\n")))
+     "already carries this as `## Paper library`.\n"
+     "\n"
+     "When the user asks to add papers, run\n"
+     "`paperlib -C " (shell-quote-argument library) " add <arXiv id or URL> ...` — several\n"
+     "in one call; a model picks each folder and writes the summary. A paper published\n"
+     "as a web page instead takes\n"
+     "`paperlib -C " (shell-quote-argument library) " add-web <url> <topic>`, where\n"
+     "`<topic>` is a folder under `library/`, and then\n"
+     "`paperlib -C " (shell-quote-argument library) " set-summary <paper.md> <summary>`.\n")))
 
 (defun ps/ai-context--render-guide (text)
   "Return guide TEXT trimmed and followed by a blank line, or \"\" when empty. Pure."

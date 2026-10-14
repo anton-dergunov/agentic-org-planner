@@ -362,7 +362,9 @@ context file inside it; the directory is removed afterwards."
               '(("A.org" . "Alpha")) nil nil nil "/inbox/info/triage.md" "/my papers")))
     (should (string-match-p "## Papers" doc))
     (should (string-match-p "`paperlib -C /my\\\\ papers info " doc))
-    (should (< (string-match "## Capture inbox" doc)
+    (should (string-match-p "`paperlib -C /my\\\\ papers add <arXiv id" doc))
+    (should (string-match-p "`paperlib -C /my\\\\ papers add-web <url> <topic>`" doc))
+    (should (<(string-match "## Capture inbox" doc)
                (string-match "## Papers" doc)
                (string-match "## File index" doc))))
   (should-not (string-match-p "## Papers"

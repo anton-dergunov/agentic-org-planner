@@ -55,6 +55,15 @@ window, the last moment before a prompt is typed. A region is easy to lose on
 the way to the panel, so the last non-empty region of a file is remembered until
 a command runs there with no region.
 
+The file reported is the one you were last in, vault or not. Tracking only vault
+files left the last of them reported, and re-asserted after every prompt, while
+you worked in the info-triage queue, which lives outside the vault. The package
+never reports such files and its sender finds the session by the current
+buffer's project, so those sends go to the vault's session explicitly. A file
+that is a person's view of a file meant for agents (the queue, beside
+`triage.md`) names the substitute through `ps/claude-report-file-functions`,
+declared by the module that owns it rather than known to `ps-claude.el`.
+
 **Files Claude writes are re-read quietly.** When Claude visits a file it just
 wrote before auto-revert has caught up, `find-file-noselect` would ask "Reread
 from disk?". The panel's entry points revert a stale, *unmodified* buffer first,

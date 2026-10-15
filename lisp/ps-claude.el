@@ -148,6 +148,20 @@
 ;;     one is gone; the snapshot is dropped as soon as a command runs in that
 ;;     buffer with no region, which is what an explicit deselect looks like.
 ;;
+;;     The file reported is whichever file buffer you were last in, vault or
+;;     not -- tracking only vault files left the last one standing while you
+;;     worked elsewhere (the info-triage queue lives outside the vault), and
+;;     every resend re-asserted it.  The package itself never reports a file
+;;     outside the session's project, and its sender looks the session up by
+;;     the *current buffer's* project, so a payload sent from such a buffer is
+;;     silently dropped: `ps/claude--send-selection' addresses the vault's
+;;     session explicitly, and for those files `ps/claude--track-region'
+;;     schedules the sends the package would not make.  A file that keeps a
+;;     separate copy for agents (the queue's is `triage.md') names it through
+;;     `ps/claude-report-file-functions', declared by the module that owns
+;;     the file; the substitute is reported with no selection, since lines in
+;;     the person's view mean nothing in the other file.
+;;
 ;; 11. `eat's interactive keymaps redirect most keys straight to the
 ;;     underlying process, but their `:ascii' category (see
 ;;     `eat-term-make-keymap') only covers the control-character range plus
@@ -233,6 +247,9 @@
 (declare-function claude-code-ide-mcp--send-notification "claude-code-ide-mcp")
 (declare-function claude-code-ide-mcp--on-open "claude-code-ide-mcp")
 (declare-function claude-code-ide-mcp--get-current-selection "claude-code-ide-mcp")
+(declare-function claude-code-ide-mcp--get-session-for-project "claude-code-ide-mcp")
+(defvar claude-code-ide-mcp--buffer-session-cache)
+(defvar claude-code-ide-mcp--buffer-cache-valid)
 (declare-function claude-code-ide-mcp--create-diff-buffers "claude-code-ide-mcp-handlers")
 (declare-function claude-code-ide-mcp-handle-open-file "claude-code-ide-mcp-handlers")
 (declare-function eat--process-output-queue "eat")
@@ -701,6 +718,12 @@ matches how claude-code-ide keys sessions (via `expand-file-name', not
   "Non-nil if the current buffer visits a file under `my-org-base-directory'."
   (and buffer-file-name (ps/claude--path-under-base-p buffer-file-name)))
 
+(defun ps/claude--session-key ()
+  "Return the key the vault's session is stored under, or nil with no vault."
+  (and (boundp 'my-org-base-directory)
+       my-org-base-directory
+       (expand-file-name my-org-base-directory)))
+
 (defun ps/claude--buffer-project-advice (orig-fn &rest args)
   "Return `my-org-base-directory' as the project for buffers under it.
 Keeps the project key used for selection / active-buffer tracking in sync
@@ -709,7 +732,7 @@ with the session key (also pinned to `my-org-base-directory' by
 are looked up under the git repo root and silently dropped.  Buffers outside
 the Org base fall through to ORIG-FN unchanged."
   (if (ps/claude--buffer-under-org-base-p)
-      (expand-file-name my-org-base-directory)
+      (ps/claude--session-key)
     (apply orig-fn args)))
 
 ;;; The editor selection Claude is told about (fix #10)
@@ -721,10 +744,25 @@ past it moves point, which moves the region's end -- can still be reported
 to Claude.  Cleared as soon as a command runs in this buffer with no region,
 which is what deselecting looks like.")
 
+(defvar ps/claude-report-file-functions nil
+  "Functions naming the file to report to Claude in place of the current one.
+Each is called with no arguments in the file buffer about to be reported and
+returns nil (no opinion) or the absolute name of the file Claude should be
+told about instead -- for a file that is a person's view of another one
+meant for agents.  The first non-nil answer wins, and it is reported with no
+selection.  Added to by the module that owns such a file.")
+
 (defvar ps/claude--last-file-buffer nil
-  "Last file buffer under the Org base that had point, or nil.
+  "Last file-visiting buffer that had point, or nil.
 The buffer a resend reports from: by the time the panel is focused the
 current buffer is the panel itself.")
+
+(defvar ps/claude--resend-timer nil
+  "Pending resend for a file outside the vault, or nil.")
+
+(defconst ps/claude--resend-delay 0.05
+  "Seconds a resend for a file outside the vault waits for further commands.
+The package's own debounce for the files it reports.")
 
 (defvar ps/claude--last-sent nil
   "The last `selection_changed' payload handed to Claude, or nil.")
@@ -782,29 +820,55 @@ Overrides `claude-code-ide-mcp--get-current-selection', whose payload is
 1-based -- one line off, since the CLI reads it as VS Code's 0-based
 positions -- and which knows nothing about a region the editor has since
 collapsed.  An oversized selection degrades to the cursor position, which
-the CLI reports as \"this file is open\"."
-  (let* ((file-path (or (buffer-file-name) ""))
-         (bounds (ps/claude--selection-bounds))
+the CLI reports as \"this file is open\".  A file named by
+`ps/claude-report-file-functions' replaces this one, with no selection."
+  (let* ((substitute (run-hook-with-args-until-success
+                      'ps/claude-report-file-functions))
+         (file-path (or (buffer-file-name) ""))
+         (bounds (and (not substitute) (ps/claude--selection-bounds)))
          (sendable (and bounds (not (ps/claude--selection-too-large-p
                                      (car bounds) (cdr bounds))))))
-    (if sendable
-        (ps/claude--selection-params
-         file-path
-         (ps/claude--position (car bounds))
-         (ps/claude--position (cdr bounds))
-         (buffer-substring-no-properties (car bounds) (cdr bounds)))
+    (cond
+     (substitute
+      (ps/claude--selection-params substitute '(0 . 0) '(0 . 0) ""))
+     (sendable
+      (ps/claude--selection-params
+       file-path
+       (ps/claude--position (car bounds))
+       (ps/claude--position (cdr bounds))
+       (buffer-substring-no-properties (car bounds) (cdr bounds))))
+     (t
       (let ((position (ps/claude--position (if bounds (car bounds) (point)))))
-        (ps/claude--selection-params file-path position position "")))))
+        (ps/claude--selection-params file-path position position ""))))))
+
+(defun ps/claude--session ()
+  "Return the vault's running session, or nil."
+  (when-let ((key (ps/claude--session-key)))
+    (and (fboundp 'claude-code-ide-mcp--get-session-for-project)
+         (claude-code-ide-mcp--get-session-for-project key))))
+
+(defun ps/claude--schedule-resend ()
+  "Resend the selection once commands pause, if a session is running.
+For files outside the vault, which the package never reports itself."
+  (when (ps/claude--session)
+    (when (timerp ps/claude--resend-timer)
+      (cancel-timer ps/claude--resend-timer))
+    (setq ps/claude--resend-timer
+          (run-with-timer ps/claude--resend-delay nil
+                          #'ps/claude--resend-selection "outside the vault"))))
 
 (defun ps/claude--track-region ()
   "Remember this buffer and its region for a later resend.
 Runs from `post-command-hook', so it only ever sees the buffer the user is
-actually working in."
-  (when (ps/claude--buffer-under-org-base-p)
+actually working in.  Any file buffer counts, not only the vault's: the
+file you are in is the one to report, wherever it lives."
+  (when buffer-file-name
     (setq ps/claude--last-file-buffer (current-buffer))
     (setq ps/claude--region-snapshot
           (when (use-region-p)
-            (cons (region-beginning) (region-end))))))
+            (cons (region-beginning) (region-end))))
+    (unless (ps/claude--buffer-under-org-base-p)
+      (ps/claude--schedule-resend))))
 
 (defun ps/claude--note-sent-selection (method params)
   "Record PARAMS as the last selection sent when METHOD is a selection change.
@@ -825,18 +889,31 @@ submitted since -- which is when the CLI discards what it knew.  Pure given
 (defun ps/claude--resend-target ()
   "Return the buffer a resend should report from, or nil."
   (and (buffer-live-p ps/claude--last-file-buffer)
-       (with-current-buffer ps/claude--last-file-buffer
-         (and (ps/claude--buffer-under-org-base-p) (current-buffer)))))
+       (buffer-file-name ps/claude--last-file-buffer)
+       ps/claude--last-file-buffer))
+
+(defun ps/claude--send-selection (payload)
+  "Send PAYLOAD to the vault's session as a `selection_changed' notification.
+The package's sender finds the session through the current buffer's
+project, which for a file outside the vault is another key or none, so the
+message would be dropped.  Sending from a scratch buffer whose session cache
+already names the vault's session keeps the package's own envelope, and the
+`ps/claude--note-sent-selection' advice still records it."
+  (when-let ((session (ps/claude--session)))
+    (with-temp-buffer
+      (setq-local claude-code-ide-mcp--buffer-session-cache session
+                  claude-code-ide-mcp--buffer-cache-valid t)
+      (claude-code-ide-mcp--send-notification "selection_changed" payload))))
 
 (defun ps/claude--resend-selection (_reason)
   "Tell Claude about the current file and selection again.
 _REASON names the trigger at each call site; it is not acted on."
   (when (fboundp 'claude-code-ide-mcp--send-notification)
     (when-let ((buffer (ps/claude--resend-target)))
-      (with-current-buffer buffer
-        (let ((payload (ps/claude--current-selection)))
-          (when (ps/claude--resend-needed-p payload)
-            (claude-code-ide-mcp--send-notification "selection_changed" payload)))))))
+      (let ((payload (with-current-buffer buffer
+                       (ps/claude--current-selection))))
+        (when (ps/claude--resend-needed-p payload)
+          (ps/claude--send-selection payload))))))
 
 (defun ps/claude--panel-selected-p (window)
   "Non-nil if WINDOW is the selected window and shows a Claude session."

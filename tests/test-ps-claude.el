@@ -634,14 +634,96 @@ it -- this was the one process still blocking exit."
       (ps/claude--track-region)
       (should-not ps/claude--region-snapshot))))
 
-(ert-deftest ps/claude-test-track-region-ignores-other-buffers ()
-  "A buffer outside the Org base never becomes the resend target."
+(ert-deftest ps/claude-test-track-region-ignores-non-file-buffers ()
+  "A buffer visiting no file never becomes the resend target."
   (with-temp-buffer
     (let ((my-org-base-directory "/tmp/vault/")
-          (buffer-file-name "/tmp/elsewhere/notes.org")
           (ps/claude--last-file-buffer 'unchanged))
       (ps/claude--track-region)
       (should (eq ps/claude--last-file-buffer 'unchanged)))))
+
+(ert-deftest ps/claude-test-track-region-follows-files-outside-the-vault ()
+  "A file outside the vault is the one reported once you are in it, and a
+resend is scheduled for it, since the package never reports it itself.
+Tracking only vault files left the last one reported while you worked
+elsewhere."
+  (with-temp-buffer
+    (let ((my-org-base-directory "/tmp/vault/")
+          (buffer-file-name "/tmp/elsewhere/notes.org")
+          (ps/claude--last-file-buffer 'unchanged)
+          (scheduled nil))
+      (cl-letf (((symbol-function 'ps/claude--schedule-resend)
+                 (lambda () (setq scheduled t))))
+        (ps/claude--track-region))
+      (should (eq ps/claude--last-file-buffer (current-buffer)))
+      (should scheduled))))
+
+(ert-deftest ps/claude-test-track-region-leaves-vault-files-to-the-package ()
+  "Vault files are reported live by the package, so no resend is scheduled."
+  (with-temp-buffer
+    (let ((my-org-base-directory "/tmp/vault/")
+          (buffer-file-name "/tmp/vault/plan.org")
+          (ps/claude--last-file-buffer nil)
+          (scheduled nil))
+      (cl-letf (((symbol-function 'ps/claude--schedule-resend)
+                 (lambda () (setq scheduled t))))
+        (ps/claude--track-region))
+      (should (eq ps/claude--last-file-buffer (current-buffer)))
+      (should-not scheduled))))
+
+(ert-deftest ps/claude-test-report-file-functions-substitute ()
+  "A file named by `ps/claude-report-file-functions' is reported instead,
+with no selection: lines in the person's view mean nothing in the other file."
+  (with-temp-buffer
+    (insert "one\ntwo\nthree\n")
+    (setq buffer-file-name "/tmp/inbox/triage.org")
+    (goto-char (point-min))
+    (set-mark (point))
+    (goto-char (point-max))
+    (activate-mark)
+    (let* ((ps/claude-report-file-functions
+            (list (lambda () nil) (lambda () "/tmp/inbox/triage.md")))
+           (payload (ps/claude--current-selection)))
+      (should (equal (alist-get 'filePath payload) "/tmp/inbox/triage.md"))
+      (should (equal (alist-get 'text payload) ""))
+      (should (equal (ps/claude-test--selection payload 'selection 'start 'line) 0))
+      (should (equal (ps/claude-test--selection payload 'selection 'end 'line) 0)))
+    (let ((ps/claude-report-file-functions (list (lambda () nil))))
+      (should (equal (alist-get 'filePath (ps/claude--current-selection))
+                     "/tmp/inbox/triage.org")))
+    (set-buffer-modified-p nil)))
+
+(ert-deftest ps/claude-test-send-selection-reaches-the-vault-session ()
+  "The payload goes to the vault's session even from a buffer outside it,
+whose own project lookup would find another session or none."
+  (let ((my-org-base-directory "/tmp/vault/")
+        (asked nil) (seen nil))
+    (cl-letf (((symbol-function 'claude-code-ide-mcp--get-session-for-project)
+               (lambda (key) (setq asked key) 'vault-session))
+              ((symbol-function 'claude-code-ide-mcp--send-notification)
+               (lambda (method params)
+                 (setq seen (list method params
+                                  claude-code-ide-mcp--buffer-session-cache
+                                  claude-code-ide-mcp--buffer-cache-valid)))))
+      (with-temp-buffer
+        (setq buffer-file-name "/tmp/elsewhere/notes.org")
+        (ps/claude--send-selection '((text . "x")))
+        (set-buffer-modified-p nil)))
+    (should (equal asked (expand-file-name "/tmp/vault/")))
+    (should (equal seen '("selection_changed" ((text . "x")) vault-session t)))))
+
+(ert-deftest ps/claude-test-send-selection-needs-a-session ()
+  "With no vault, or no session running for it, nothing is sent."
+  (let ((sent nil))
+    (cl-letf (((symbol-function 'claude-code-ide-mcp--get-session-for-project)
+               (lambda (_) nil))
+              ((symbol-function 'claude-code-ide-mcp--send-notification)
+               (lambda (&rest _) (setq sent t))))
+      (let ((my-org-base-directory nil))
+        (ps/claude--send-selection '((text . "x"))))
+      (let ((my-org-base-directory "/tmp/vault/"))
+        (ps/claude--send-selection '((text . "x")))))
+    (should-not sent)))
 
 (ert-deftest ps/claude-test-oversized-selection-degrades-to-the-file ()
   "Past the size cap the file is reported without pasting the region."
@@ -752,6 +834,14 @@ fire at all."
     (let ((my-org-base-directory "/tmp/vault/")
           (ps/claude--last-file-buffer buf))
       (should (eq (ps/claude--resend-target) buf))
+      ;; A file outside the vault is reported too.
+      (with-current-buffer buf
+        (setq buffer-file-name "/tmp/elsewhere/notes.org"))
+      (should (eq (ps/claude--resend-target) buf))
+      ;; A buffer that no longer visits a file is not.
+      (with-current-buffer buf
+        (setq buffer-file-name nil))
+      (should-not (ps/claude--resend-target))
       (kill-buffer buf)
       (should-not (ps/claude--resend-target)))))
 

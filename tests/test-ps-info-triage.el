@@ -158,6 +158,26 @@ one you stop reading, which is the opposite of what a delete prompt is for."
     (should (equal (ps/info-triage--item-label)
                    "Scalable Keyword Spotting via Modular Network Expansion"))))
 
+(ert-deftest ps/info-triage--agent-file-names-what-an-agent-should-read ()
+  "The assistant panel is never told about the queue itself, which holds
+strictly less than `triage.md': on an item it is told about that item's own
+file, so \"this\" means the item, and between items about `triage.md'."
+  (ps/info-triage-test--in-queue
+    (let ((ps/info-triage-directory "/nowhere/inbox/"))
+      (setq buffer-file-name "/nowhere/inbox/triage.org")
+      (ps/info-triage-test--goto 2)
+      (forward-line 1)
+      (should (equal (ps/info-triage--agent-file)
+                     "/nowhere/inbox/2026-08-16_156/index.md"))
+      (re-search-backward "^\\* 2026-08-16")
+      (should (equal (ps/info-triage--agent-file) "/nowhere/inbox/triage.md"))
+      (goto-char (point-min))
+      (should (equal (ps/info-triage--agent-file) "/nowhere/inbox/triage.md"))
+      ;; Any other file is left alone.
+      (setq buffer-file-name "/nowhere/inbox/notes.org")
+      (should-not (ps/info-triage--agent-file))
+      (set-buffer-modified-p nil))))
+
 ;;; -------------------------------------------------------
 ;;; Availability -- what the menu is gated on
 ;;; -------------------------------------------------------

@@ -36,6 +36,11 @@ Emacs diagnostics.
 
 With nothing selected, it is simply told which file you are in — including
 right after you start a session, so the first question can say "this file".
+That is whichever file you were last in, inside your Org folder or not.
+
+Some files are a view for you of another file meant for the assistant; then the
+assistant is told about that one instead. The [[file:Info-triage.org][Info triage]] queue is the case in
+point: on an item, the assistant is told about that item, so "this" means it.
 
 * Reviewing proposed edits
 Changes the assistant wants to make are shown as an Emacs diff (Ediff) so you

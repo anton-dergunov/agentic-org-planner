@@ -833,6 +833,7 @@ fire at all."
       (setq buffer-file-name "/tmp/vault/plan.org"))
     (let ((my-org-base-directory "/tmp/vault/")
           (ps/claude--last-file-buffer buf))
+      (set-window-buffer (selected-window) buf)
       (should (eq (ps/claude--resend-target) buf))
       ;; A file outside the vault is reported too.
       (with-current-buffer buf
@@ -844,6 +845,23 @@ fire at all."
       (should-not (ps/claude--resend-target))
       (kill-buffer buf)
       (should-not (ps/claude--resend-target)))))
+
+(ert-deftest ps/claude-test-resend-target-requires-a-shown-buffer ()
+  "A file no window shows any more is not the file you are in.
+Without this, leaving it for buffers that visit no file -- the agenda, the
+file tree -- left it attached to every prompt from then on."
+  (let ((buf (generate-new-buffer " *ps-claude-target*"))
+        (window (selected-window)))
+    (unwind-protect
+        (let ((ps/claude--last-file-buffer buf))
+          (with-current-buffer buf
+            (setq buffer-file-name "/tmp/elsewhere/notes.org"))
+          (set-window-buffer window buf)
+          (should (eq (ps/claude--resend-target) buf))
+          (set-window-buffer window (get-buffer-create "*scratch*"))
+          (should-not (ps/claude--resend-target)))
+      (set-window-buffer window (get-buffer-create "*scratch*"))
+      (kill-buffer buf))))
 
 ;;; Repaint after a resize Claude was never told about (fix #14)
 

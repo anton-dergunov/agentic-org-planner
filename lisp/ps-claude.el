@@ -160,7 +160,12 @@
 ;;     separate copy for agents (the queue's is `triage.md') names it through
 ;;     `ps/claude-report-file-functions', declared by the module that owns
 ;;     the file; the substitute is reported with no selection, since lines in
-;;     the person's view mean nothing in the other file.
+;;     the person's view mean nothing in the other file.  The file you
+;;     were last in is only reported while some window still shows it
+;;     (`ps/claude--resend-target'): after you leave it for
+;;     buffers that visit no file (the agenda, the file tree, a folder
+;;     listing) it would otherwise be re-sent with every prompt, long after
+;;     it left the screen.
 ;;
 ;; 11. `eat's interactive keymaps redirect most keys straight to the
 ;;     underlying process, but their `:ascii' category (see
@@ -887,9 +892,13 @@ submitted since -- which is when the CLI discards what it knew.  Pure given
       (not (equal payload ps/claude--last-sent))))
 
 (defun ps/claude--resend-target ()
-  "Return the buffer a resend should report from, or nil."
+  "Return the buffer a resend should report from, or nil.
+Only while some window still shows it: a file you have moved away from is
+no longer the file you are in, and re-sending it after every prompt would
+keep attaching it long after it left the screen."
   (and (buffer-live-p ps/claude--last-file-buffer)
        (buffer-file-name ps/claude--last-file-buffer)
+       (get-buffer-window ps/claude--last-file-buffer 0)
        ps/claude--last-file-buffer))
 
 (defun ps/claude--send-selection (payload)

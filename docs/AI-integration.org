@@ -36,7 +36,9 @@ Emacs diagnostics.
 
 With nothing selected, it is simply told which file you are in — including
 right after you start a session, so the first question can say "this file".
-That is whichever file you were last in, inside your Org folder or not.
+That is whichever file you were last in, inside your Org folder or not, as
+long as it is still on screen: once no window shows it, it is no longer
+mentioned.
 
 Some files are a view for you of another file meant for the assistant; then the
 assistant is told about that one instead. The [[file:Info-triage.org][Info triage]] queue is the case in

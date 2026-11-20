@@ -1,6 +1,7 @@
 ---
 name: route
 description: Take messy captured material — a slice of Inbox.org or another inbox file, the info-triage inbox, or text pasted into the chat — and work out where it belongs in the Org plans (worth keeping at all, already filed elsewhere, shaped into a proper task, and which file and section it goes to). Reports numbered findings and waits for approval; on approval files the items and removes them from the source. Use for "process my inbox", "file this", "where does this go", "route triage", "route the triage inbox".
+allowed-tools: Read Grep Glob WebSearch WebFetch Bash(grep *) Bash(head *) Bash(tail *) Bash(wc *) Bash(ls *) Bash(cat *) Bash(sed -n *) Bash(sort *) Bash(cut *) Bash(uniq *) Bash(echo *) Bash(paperlib info *) Bash(paperlib -C * info *)
 ---
 
 # /route — bring messy input into the notes
@@ -125,7 +126,10 @@ one item and is self-contained.
   that it has no purpose.
 - **Filing an item means deleting its directory `<id>/`.** `triage.md` is
   generated from those directories and must never be edited; the next sync
-  regenerates it and carries the deletion upstream.
+  regenerates it and carries the deletion upstream. Until then it still lists
+  what was filed, numbers unchanged, so numbers you quoted earlier stay valid. A
+  section whose `<id>/` directory is gone was already filed: skip it, and never
+  propose it again.
 
 ## Notes
 

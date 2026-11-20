@@ -32,6 +32,17 @@
 ;; directory renumbers everything after it, so the views must be rebuilt
 ;; together -- which is what `sync.sh --regenerate' exists for.
 ;;
+;; An item filed from ELSEWHERE -- `/route' deleting its directory -- is the
+;; opposite case, and deliberately does not renumber.  The queue marks it struck
+;; through, and the header line says how many were filed and offers Renumber
+;; (`ps/info-triage--refresh-filed').  Until then both views still agree, so
+;; every number already quoted in the assistant's conversation still names the
+;; same item.  Rebuilding is the moment those numbers expire, and a list
+;; renumbering itself under someone reading it is exactly the surprise to
+;; avoid, so the person picks the moment.  The inbox is watched with
+;; file-notify only while the queue is open; showing the queue in a window
+;; refreshes it too, in case a watch missed an event.
+;;
 ;; A sync is watched by reading the script's own output, which makes two more
 ;; line shapes part of the contract with info_triage/sync.py: `==> Stage' opens
 ;; a stage (`synchronize' and the annotation passes print these), and
@@ -62,6 +73,7 @@
 ;;; Code:
 
 (require 'seq)
+(require 'filenotify)
 ;; A real require, not a declaration: the keymap below is built at load time
 ;; and `ps/open-bind-click' has to exist by then.
 (require 'ps-open)
@@ -351,6 +363,121 @@ That is what takes the new-items marker off the file tree's mode line."
     (ps/info-triage--set-status
      (plist-put (copy-sequence ps/info-triage--status) :seen t))))
 
+;;; Filed items
+
+(defface ps/info-triage-filed
+  '((t :inherit shadow :strike-through t))
+  "Face for an item the queue still lists although its directory is gone.
+That is an item filed elsewhere -- by `/route', usually -- since the list was
+built."
+  :group 'ps/info-triage)
+
+(defvar-local ps/info-triage--filed nil
+  "Directory names of the items this queue lists that are gone from disk.
+Kept current by `ps/info-triage--refresh-filed'; the header line only reads it,
+because it is evaluated on every redisplay.")
+
+(defvar-local ps/info-triage--watch nil
+  "The file-notify watch on the inbox, while this queue is open.")
+
+(defvar-local ps/info-triage--refresh-timer nil
+  "Pending debounced `ps/info-triage--refresh-filed', if any.")
+
+(defvar ps/info-triage-mode)
+
+(defun ps/info-triage--listed-items ()
+  "Return (NAME . POSITION) for every item the queue lists, in order.
+NAME is the item's directory, POSITION the start of its heading."
+  (save-excursion
+    (goto-char (point-min))
+    (let (items)
+      (while (re-search-forward ps/info-triage--heading-re nil t)
+        ;; Taken first: reading the link searches, and that resets the match.
+        (let ((start (match-beginning 0)))
+          (when-let* ((name (ps/info-triage--item-directory)))
+            (push (cons name start) items))))
+      (nreverse items))))
+
+(defun ps/info-triage--gone-items (items)
+  "Return those ITEMS whose directory is gone.
+ITEMS is as `ps/info-triage--listed-items' returns it.
+Nothing, when the inbox itself is missing: that is no inbox, not every item
+filed."
+  (when (file-directory-p ps/info-triage-directory)
+    (seq-remove (lambda (item)
+                  (file-directory-p
+                   (expand-file-name (car item) ps/info-triage-directory)))
+                items)))
+
+(defun ps/info-triage--item-end (position)
+  "Return where the item whose heading starts at POSITION ends."
+  (save-excursion
+    (goto-char position)
+    (forward-line 1)
+    (if (re-search-forward ps/info-triage--any-heading-re nil t)
+        (match-beginning 0)
+      (point-max))))
+
+(defun ps/info-triage--refresh-filed (&rest _)
+  "Mark the items whose directory has gone, and say so on the header line.
+Takes any arguments, so it can sit on a hook directly."
+  (when ps/info-triage-mode
+    (let ((gone (ps/info-triage--gone-items (ps/info-triage--listed-items))))
+      (remove-overlays (point-min) (point-max) 'ps/info-triage-filed t)
+      (dolist (item gone)
+        (let ((overlay (make-overlay (cdr item)
+                                     (ps/info-triage--item-end (cdr item)))))
+          (overlay-put overlay 'ps/info-triage-filed t)
+          (overlay-put overlay 'face 'ps/info-triage-filed)
+          (overlay-put overlay 'help-echo
+                       "Filed since this list was built -- Renumber removes it")))
+      (unless (equal (mapcar #'car gone) ps/info-triage--filed)
+        (setq ps/info-triage--filed (mapcar #'car gone))
+        (force-mode-line-update)))))
+
+(defun ps/info-triage--refresh-shown (window)
+  "Refresh the filed items of the queue WINDOW has just started showing.
+On the queue's buffer-local `window-buffer-change-functions'."
+  (when (window-live-p window)
+    (with-current-buffer (window-buffer window)
+      (ps/info-triage--refresh-filed))))
+
+(defun ps/info-triage--schedule-refresh (buffer)
+  "Refresh BUFFER's filed items shortly, once however many events arrive.
+Not while the sync script runs: it moves directories by the dozen, and ends by
+reverting the queue, which refreshes it anyway."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when (timerp ps/info-triage--refresh-timer)
+        (cancel-timer ps/info-triage--refresh-timer))
+      (setq ps/info-triage--refresh-timer
+            (run-with-timer
+             0.3 nil
+             (lambda ()
+               (when (and (buffer-live-p buffer)
+                          (not (ps/info-triage--busy-p)))
+                 (with-current-buffer buffer
+                   (ps/info-triage--refresh-filed)))))))))
+
+(defun ps/info-triage--watch-stop (&rest _)
+  "Remove this queue's watch on the inbox, if it has one."
+  (when ps/info-triage--watch
+    (ignore-errors (file-notify-rm-watch ps/info-triage--watch))
+    (setq ps/info-triage--watch nil)))
+
+(defun ps/info-triage--watch-start ()
+  "Watch the inbox, so an item filed from elsewhere is marked at once.
+A watch that cannot be set up is no loss: showing the queue in a window
+refreshes it too."
+  (ps/info-triage--watch-stop)
+  (when (file-directory-p ps/info-triage-directory)
+    (let ((buffer (current-buffer)))
+      (setq ps/info-triage--watch
+            (ignore-errors
+              (file-notify-add-watch
+               ps/info-triage-directory '(change)
+               (lambda (_event) (ps/info-triage--schedule-refresh buffer))))))))
+
 ;;;###autoload
 (defun ps/info-triage-show-log ()
   "Show the sync script's output."
@@ -379,19 +506,33 @@ That is what takes the new-items marker off the file tree's mode line."
                                 (ps/info-triage--format-time
                                  (file-attribute-modification-time attributes)))
                       "Not synced yet")))
+         ;; Items filed since the list was built, unless something more urgent
+         ;; holds the line: a sync under way, or one that failed.
+         (filed (and (memq state '(idle done))
+                     (length ps/info-triage--filed)))
          (log (ps/info-triage--button "Log" #'ps/info-triage-show-log
                                       "show the sync script's output"))
          (sync (lambda (text)
                  (ps/info-triage--button text #'ps/info-triage-sync
                                          "fetch new captures"))))
     (concat " "
-            ;; A `%' in the script's output is not a mode-line construct.
-            (replace-regexp-in-string "%" "%%" label t t)
+            (if (and filed (> filed 0))
+                (propertize (format "⚠ %d item%s filed since this list was built"
+                                    filed (if (= filed 1) "" "s"))
+                            'face 'warning)
+              ;; A `%' in the script's output is not a mode-line construct.
+              (replace-regexp-in-string "%" "%%" label t t))
             "   "
             (pcase state
               ('running log)
               ('failed (concat log "  " (funcall sync "Retry")))
-              (_ (funcall sync "Sync"))))))
+              (_ (concat
+                  (when (and filed (> filed 0))
+                    (concat (ps/info-triage--button
+                             "Renumber" #'ps/info-triage-regenerate
+                             "rebuild the list without them; later numbers shift up")
+                            "  "))
+                  (funcall sync "Sync")))))))
 
 (defvar ps/info-triage--modeline-map
   (let ((map (make-sparse-keymap)))
@@ -714,6 +855,23 @@ bindings."
   (if ps/info-triage-mode
       (add-hook 'window-buffer-change-functions #'ps/info-triage--mark-seen nil t)
     (remove-hook 'window-buffer-change-functions #'ps/info-triage--mark-seen t))
+  ;; Items filed from elsewhere: marked now, whenever the inbox changes, and
+  ;; again whenever the queue comes into view in case a watch missed it.  A
+  ;; revert re-runs `org-mode', whose `kill-all-local-variables' would drop
+  ;; the watch's descriptor without removing the watch -- hence
+  ;; `change-major-mode-hook', which runs first.
+  (cond
+   (ps/info-triage-mode
+    (add-hook 'window-buffer-change-functions #'ps/info-triage--refresh-shown nil t)
+    (add-hook 'change-major-mode-hook #'ps/info-triage--watch-stop nil t)
+    (add-hook 'kill-buffer-hook #'ps/info-triage--watch-stop nil t)
+    (ps/info-triage--watch-start)
+    (ps/info-triage--refresh-filed))
+   (t
+    (remove-hook 'window-buffer-change-functions #'ps/info-triage--refresh-shown t)
+    (ps/info-triage--watch-stop)
+    (remove-overlays (point-min) (point-max) 'ps/info-triage-filed t)
+    (setq ps/info-triage--filed nil)))
   ;; A click here follows a link and nothing else -- the RET behaviour of
   ;; opening the item at point when there is no link would mean clicking
   ;; anywhere at all opened something.

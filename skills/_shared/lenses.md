@@ -153,6 +153,15 @@ count per lens and propose running one lens at a time. Long lists get
 rubber-stamped, and rubber-stamping loses exactly the corrections that make this
 worth doing.
 
+## Reading during the report
+
+The report runs without permission prompts, so the user can leave it unattended:
+the skill pre-approves reading tools for the turn that invokes it, and nothing else.
+Read with Read, Grep and Glob, and keep any shell command to one simple read
+(`grep`, `head`, `sed -n`, `ls`, `wc`). A `for` loop, a `cd … &&` chain, `curl` or
+a `python3` script is not pre-approved: it stops the report on a prompt nobody is
+watching for.
+
 ## Approval
 
 Report, then wait. Never edit before the user picks findings — these notes are a

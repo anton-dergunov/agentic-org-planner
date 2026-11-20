@@ -373,4 +373,76 @@ stock Org handling and opening the item in another window."
     (should (eq (command-remapping #'org-open-at-mouse)
                 #'ps/info-triage-follow-at-mouse))))
 
+;;; -------------------------------------------------------
+;;; Items filed from elsewhere
+;;; -------------------------------------------------------
+
+(defmacro ps/info-triage-test--with-inbox (&rest body)
+  "Run BODY with `ps/info-triage-directory' a temporary inbox.
+It holds a directory for every item in the sample queue."
+  (declare (indent 0))
+  `(let* ((ps/info-triage-directory
+           (file-name-as-directory (make-temp-file "ps-info-triage-" t)))
+          (ps/info-triage--status '(:state idle)))
+     (unwind-protect
+         (progn
+           (dolist (name '("2026-08-14_146" "2026-08-16_156" "2026-08-16_165"))
+             (make-directory (expand-file-name name ps/info-triage-directory)))
+           ,@body)
+       (delete-directory ps/info-triage-directory t))))
+
+(defun ps/info-triage-test--file (name)
+  "Remove item directory NAME, as `/route' does when it files an item."
+  (delete-directory (expand-file-name name ps/info-triage-directory) t))
+
+(ert-deftest ps/info-triage--listed-items-reads-every-item-in-order ()
+  (ps/info-triage-test--in-queue
+    (let ((items (ps/info-triage--listed-items)))
+      (should (equal (mapcar #'car items)
+                     '("2026-08-14_146" "2026-08-16_156" "2026-08-16_165")))
+      ;; Each position is its own item's heading, not the one before.
+      (goto-char (cdr (nth 1 items)))
+      (should (looking-at "\\*\\* 2 ")))))
+
+(ert-deftest ps/info-triage--refresh-filed-marks-a-filed-item ()
+  (ps/info-triage-test--with-inbox
+    (ps/info-triage-test--in-queue
+      (ps/info-triage-mode 1)
+      (should-not ps/info-triage--filed)
+      (ps/info-triage-test--file "2026-08-16_156")
+      (ps/info-triage--refresh-filed)
+      (should (equal ps/info-triage--filed '("2026-08-16_156")))
+      (ps/info-triage-test--goto 2)
+      (should (seq-some (lambda (o) (overlay-get o 'ps/info-triage-filed))
+                        (overlays-at (point))))
+      ;; The overlay covers its own item and stops at the next heading.
+      (ps/info-triage-test--goto 3)
+      (should-not (seq-some (lambda (o) (overlay-get o 'ps/info-triage-filed))
+                            (overlays-at (point))))
+      (ps/info-triage-mode -1)
+      (should-not ps/info-triage--filed))))
+
+(ert-deftest ps/info-triage--header-line-offers-renumber-only-when-items-were-filed ()
+  (ps/info-triage-test--with-inbox
+    (ps/info-triage-test--in-queue
+      (ps/info-triage-mode 1)
+      (should-not (string-match-p "Renumber" (ps/info-triage--header-line)))
+      (ps/info-triage-test--file "2026-08-14_146")
+      (ps/info-triage-test--file "2026-08-16_165")
+      (ps/info-triage--refresh-filed)
+      (let ((line (ps/info-triage--header-line)))
+        (should (string-match-p "2 items filed" line))
+        (should (string-match-p "Renumber" line))
+        (should (string-match-p "Sync" line)))
+      ;; A sync under way holds the line, and ends by rebuilding the list.
+      (let ((ps/info-triage--status '(:state running :action sync)))
+        (should-not (string-match-p "Renumber" (ps/info-triage--header-line))))
+      (ps/info-triage-mode -1))))
+
+(ert-deftest ps/info-triage--gone-items-is-empty-without-an-inbox ()
+  "A missing inbox is no inbox, not every item filed."
+  (ps/info-triage-test--in-queue
+    (let ((ps/info-triage-directory "/nowhere/at/all/"))
+      (should-not (ps/info-triage--gone-items (ps/info-triage--listed-items))))))
+
 ;;; test-ps-info-triage.el ends here

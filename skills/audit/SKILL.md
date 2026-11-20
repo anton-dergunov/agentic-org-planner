@@ -1,6 +1,7 @@
 ---
 name: audit
 description: Review Org plan items already in these notes and report what should change — outdated or weak material, badly shaped tasks, wrong grouping. Verification only; reports numbered findings and waits for approval. Use for "review this plan / file / section", "is this task any good", "what here is outdated", "does this structure still fit". Scope can be a file, a section, a selection, or several files.
+allowed-tools: Read Grep Glob WebSearch WebFetch Bash(grep *) Bash(head *) Bash(tail *) Bash(wc *) Bash(ls *) Bash(cat *) Bash(sed -n *) Bash(sort *) Bash(cut *) Bash(uniq *) Bash(echo *) Bash(paperlib info *) Bash(paperlib -C * info *)
 ---
 
 # /audit — review what is already in the notes

@@ -75,9 +75,17 @@ The line at the top of the queue says what it is doing and what you can do next:
 : Syncing · Downloading new and edited items · 3/12   Log
 : Synced 14:32 · 3 new   Sync
 : Sync failed · …   Log  Retry
+: ⚠ 2 items filed since this list was built   Renumber  Sync
 
 =Sync= and =Retry= start a sync, =Log= shows everything the sync script printed.
 The list reloads by itself when the sync finishes.
+
+*When the assistant files items* (=/route triage=, then your "apply …"), their
+folders go, but the list stays as it was so you can keep reading. Each filed item is struck through
+where it stands, and the line at the top counts them. The numbers don't move
+yet, so the numbers you and the assistant are using in the chat still name the
+same items. Click =Renumber= (or press =g=) when you are done: the filed items
+leave the list and the ones after them move up. A sync renumbers too.
 
 When you have gone to another file meanwhile, a small marker at the bottom of
 the file tree, beside the git-sync status, keeps you posted: =⇣= while a sync
@@ -101,7 +109,7 @@ The queue is read-only (it is rebuilt on every sync), so single keys act on it:
 | =n= / =p=     | next / previous item (day headings are stepped over)   |
 | =d=           | drop the item at point (asks first; goes to the Trash) |
 | =s=           | sync                                                   |
-| =g=           | rebuild the list without syncing                       |
+| =g=           | rebuild and renumber the list without syncing          |
 | =e=           | open the item's folder outside Emacs                   |
 | =b= / =f=     | back / forward                                         |
 | =q=           | put the queue away                                     |
@@ -147,6 +155,8 @@ rebuilt, so this can come back after an upgrade.
   (=ps/info-triage-directory=, =ps/info-triage-external-command=,
   =ps/info-triage-open-beside=). Where the sync script is
   (=ps/info-triage-sync-script=) is machine-local and goes in =local.el=.
+  How a filed item looks is the face =ps/info-triage-filed= (=M-x
+  customize-face=).
 - Opening files, back/forward and folder listings are shared with the rest of
   the config; their settings are listed in [[file:Files-and-navigation.org][Files & navigation]].
 - The two generated lists, and the sync script itself, belong to the

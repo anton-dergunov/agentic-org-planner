@@ -81,6 +81,22 @@ SPLIT DUP ASK`) and wait. The user answers in chat ("apply 3, 7, 9–12; discuss
 This is behavioural, not a tool restriction: the skills must be able to apply
 the picked findings in the same conversation.
 
+**The report is pre-approved; applying never is.** Each skill's `allowed-tools`
+frontmatter names the reading tools: Read, Grep, Glob, web search and fetch,
+single read-only shell commands, `paperlib info`. Claude Code grants these only
+for the turn that invokes the skill, and the grant clears at the next user
+message. So the report runs unattended in normal permission mode, and the
+"apply 3, 7" reply, being a new turn, asks for every edit and deletion. This
+replaced switching modes by hand: auto mode for the report, then back to manual
+for the apply step. Forgetting to switch back let edits to the plans run
+unattended, and cycling with Shift+Tab to reach a mode was a chore. The list
+came from the tool calls in 65 real report turns: reads outside the vault (the
+triage inbox, the notes vault, other repositories), many web fetch domains, and
+`grep | head` pipelines. Writes, `rm`, `curl`, `awk`, `python3` and `find` are
+left out on purpose (`find` is in Claude Code's built-in read-only set anyway).
+`lenses.md` steers the report towards those tools, since a shell loop the grant
+doesn't cover stops the run on a prompt.
+
 **A findings ceiling of about fifteen.** Long lists get rubber-stamped, and the
 corrections that matter most — facts the model cannot know, such as that a book
 was already read — are exactly what rubber-stamping loses. Past the ceiling the

@@ -18,7 +18,7 @@ resolved scope in one line** before doing any work.
 - A slice of the capture inbox's `triage.md` (its path is under *Capture inbox* in
   `.claude/generated-context.md`) — the generated capture digest. See
   the contract note at the top of that file. "triage", "the triage inbox",
-  "info-triage", or `triage.org` being the file on screen all mean this one;
+  "info-triage", or `triage.org` all mean this one;
   never read `triage.org` itself, which holds strictly less. `/route` spells the
   substitution out.
 

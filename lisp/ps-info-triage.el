@@ -51,11 +51,13 @@
 ;; rebuilt, since it is tied to the code signature.
 ;; `ps/info-triage--failure-hint' turns that message into the thing to do.
 ;;
-;; The queue is never what the assistant panel should be told you are in:
-;; `triage.org' holds strictly less than `triage.md' and says so to any agent
-;; that reads it.  `ps/info-triage--agent-file' names the file to report in
-;; its place -- the item under the cursor, or `triage.md' between items --
-;; through `ps/claude-report-file-functions'.
+;; The assistant panel is never told about the queue, nor about a selection
+;; in it: `ps/info-triage--report-file' answers `:none' on
+;; `ps/claude-report-file-functions'.  `triage.org' holds strictly less than
+;; `triage.md', so it is never what an agent should read; and reporting
+;; `triage.md' or the item under the cursor in its place was noise -- a
+;; badge that stayed while nothing was selected, and a bare `/route' that
+;; acted on that one item.  You ask with `/route triage' or by naming items.
 
 ;;; Code:
 
@@ -128,9 +130,6 @@ The escape hatch for a mixed-media item Emacs is the wrong tool for."
 
 (defconst ps/info-triage-queue-name "triage.org"
   "The generated navigation view, inside `ps/info-triage-directory'.")
-
-(defconst ps/info-triage-agent-queue-name "triage.md"
-  "The generated view for agents, beside `ps/info-triage-queue-name'.")
 
 (defconst ps/info-triage--directory-link-re
   "\\[\\[file:\\([^]/]+\\)/\\]\\[directory\\]\\]"
@@ -206,18 +205,11 @@ the queue no longer carries a drawer -- see this file's Commentary."
                   (user-error "Point is not on an item"))))
     (expand-file-name name ps/info-triage-directory)))
 
-(defun ps/info-triage--agent-file ()
-  "Return the file an assistant should be told about instead of the queue.
-In the queue, the item at point's `index.md' -- so \"this\" means that item --
-or `triage.md' when point is on no item.  Nil in any other buffer.  On
-`ps/claude-report-file-functions'."
+(defun ps/info-triage--report-file ()
+  "Return `:none' in the queue, so the assistant panel is told of no file.
+Nil in any other buffer.  On `ps/claude-report-file-functions'."
   (when (ps/info-triage-queue-buffer-p)
-    (let ((name (ps/info-triage--item-directory)))
-      (if name
-          (expand-file-name "index.md"
-                            (expand-file-name name ps/info-triage-directory))
-        (expand-file-name ps/info-triage-agent-queue-name
-                          ps/info-triage-directory)))))
+    :none))
 
 (defun ps/info-triage--item-label ()
   "Return the item at point's heading without what the prompt already says.
@@ -746,9 +738,9 @@ bindings."
 ;;;###autoload
 (defun ps/info-triage-setup ()
   "Recognise the info-triage queue whenever it is opened.
-Also points the assistant panel at what the queue stands for."
+Also keeps the queue out of what the assistant panel is told."
   (add-hook 'org-mode-hook #'ps/info-triage--maybe-enable)
-  (add-hook 'ps/claude-report-file-functions #'ps/info-triage--agent-file))
+  (add-hook 'ps/claude-report-file-functions #'ps/info-triage--report-file))
 
 (provide 'ps-info-triage)
 ;;; ps-info-triage.el ends here

@@ -65,8 +65,7 @@ Always name the existing task and its location, so the call can be checked.
 ## The info-triage inbox
 
 **Naming the inbox is enough.** `/route triage`, `/route the triage inbox`,
-`/route info-triage`, "route my inbox items", and a bare `/route` invoked while
-`triage.org` is the file on screen all resolve to the `triage.md` named under
+`/route info-triage` and "route my inbox items" all resolve to the `triage.md` named under
 *Capture inbox* in `.claude/generated-context.md`. That path is outside the notes
 and this runs every day; do not make the user type it. If the generated context
 names no capture inbox, there is none on this machine — say so.

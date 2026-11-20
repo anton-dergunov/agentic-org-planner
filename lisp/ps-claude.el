@@ -156,16 +156,21 @@
 ;;     the *current buffer's* project, so a payload sent from such a buffer is
 ;;     silently dropped: `ps/claude--send-selection' addresses the vault's
 ;;     session explicitly, and for those files `ps/claude--track-region'
-;;     schedules the sends the package would not make.  A file that keeps a
-;;     separate copy for agents (the queue's is `triage.md') names it through
-;;     `ps/claude-report-file-functions', declared by the module that owns
-;;     the file; the substitute is reported with no selection, since lines in
-;;     the person's view mean nothing in the other file.  The file you
-;;     were last in is only reported while some window still shows it
-;;     (`ps/claude--resend-target'): after you leave it for
-;;     buffers that visit no file (the agenda, the file tree, a folder
-;;     listing) it would otherwise be re-sent with every prompt, long after
-;;     it left the screen.
+;;     schedules the sends the package would not make.  The module that owns
+;;     a file can override what is reported for it through
+;;     `ps/claude-report-file-functions': another file in its place (a view
+;;     of a copy meant for agents), reported with no selection since lines in
+;;     the person's view mean nothing in the other file, or `:none' for no
+;;     file at all.  The info-triage queue answers `:none' -- reporting it,
+;;     or the item under the cursor, was noise that made a bare prompt act on
+;;     one line.  "No file" is an empty path, not silence: the CLI shows no
+;;     badge and attaches nothing for an empty path, so this clears what it
+;;     last showed, where sending nothing would leave the previous file's
+;;     badge standing.  The file you were last in is only reported while
+;;     some window still shows it (`ps/claude--resend-target'): after you
+;;     leave it for buffers that visit no file (the agenda, the file tree, a
+;;     folder listing) it would otherwise be re-sent with every prompt, long
+;;     after it left the screen.
 ;;
 ;; 11. `eat's interactive keymaps redirect most keys straight to the
 ;;     underlying process, but their `:ascii' category (see
@@ -752,10 +757,12 @@ which is what deselecting looks like.")
 (defvar ps/claude-report-file-functions nil
   "Functions naming the file to report to Claude in place of the current one.
 Each is called with no arguments in the file buffer about to be reported and
-returns nil (no opinion) or the absolute name of the file Claude should be
+returns nil (no opinion), the absolute name of the file Claude should be
 told about instead -- for a file that is a person's view of another one
-meant for agents.  The first non-nil answer wins, and it is reported with no
-selection.  Added to by the module that owns such a file.")
+meant for agents -- or `:none' to tell Claude about no file at all, which
+also clears whatever file it was last told about.  The first non-nil answer
+wins, and either way no selection is reported.  Added to by the module that
+owns such a file.")
 
 (defvar ps/claude--last-file-buffer nil
   "Last file-visiting buffer that had point, or nil.
@@ -826,7 +833,8 @@ Overrides `claude-code-ide-mcp--get-current-selection', whose payload is
 positions -- and which knows nothing about a region the editor has since
 collapsed.  An oversized selection degrades to the cursor position, which
 the CLI reports as \"this file is open\".  A file named by
-`ps/claude-report-file-functions' replaces this one, with no selection."
+`ps/claude-report-file-functions' replaces this one, with no selection; an
+answer of `:none' reports no file, an empty path the CLI shows nothing for."
   (let* ((substitute (run-hook-with-args-until-success
                       'ps/claude-report-file-functions))
          (file-path (or (buffer-file-name) ""))
@@ -834,6 +842,9 @@ the CLI reports as \"this file is open\".  A file named by
          (sendable (and bounds (not (ps/claude--selection-too-large-p
                                      (car bounds) (cdr bounds))))))
     (cond
+     ((eq substitute :none)
+      ;; Start and end must be present: the CLI ignores a payload without them.
+      (ps/claude--selection-params "" '(0 . 0) '(0 . 0) ""))
      (substitute
       (ps/claude--selection-params substitute '(0 . 0) '(0 . 0) ""))
      (sendable

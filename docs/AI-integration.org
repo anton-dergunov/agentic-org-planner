@@ -40,9 +40,10 @@ That is whichever file you were last in, inside your Org folder or not, as
 long as it is still on screen: once no window shows it, it is no longer
 mentioned.
 
-Some files are a view for you of another file meant for the assistant; then the
-assistant is told about that one instead. The [[file:Info-triage.org][Info triage]] queue is the case in
-point: on an item, the assistant is told about that item, so "this" means it.
+Some files are never mentioned, not even a selection in them; while you are in
+one, the panel shows no file. The [[file:Info-triage.org][Info triage]] queue is one: it is a list for you,
+and the assistant reads the full version of it when you ask with
+=/route triage=.
 
 * Reviewing proposed edits
 Changes the assistant wants to make are shown as an Emacs diff (Ediff) so you

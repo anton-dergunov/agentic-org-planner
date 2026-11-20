@@ -693,6 +693,25 @@ with no selection: lines in the person's view mean nothing in the other file."
                      "/tmp/inbox/triage.org")))
     (set-buffer-modified-p nil)))
 
+(ert-deftest ps/claude-test-report-file-functions-none ()
+  "An answer of `:none' reports no file and no selection, even with a region:
+an empty path, which the CLI shows nothing for, with start and end present,
+since the CLI ignores a payload without them."
+  (with-temp-buffer
+    (insert "one\ntwo\nthree\n")
+    (setq buffer-file-name "/tmp/inbox/triage.org")
+    (goto-char (point-min))
+    (set-mark (point))
+    (goto-char (point-max))
+    (activate-mark)
+    (let* ((ps/claude-report-file-functions (list (lambda () :none)))
+           (payload (ps/claude--current-selection)))
+      (should (equal (alist-get 'filePath payload) ""))
+      (should (equal (alist-get 'text payload) ""))
+      (should (equal (ps/claude-test--selection payload 'selection 'start 'line) 0))
+      (should (equal (ps/claude-test--selection payload 'selection 'end 'line) 0)))
+    (set-buffer-modified-p nil)))
+
 (ert-deftest ps/claude-test-send-selection-reaches-the-vault-session ()
   "The payload goes to the vault's session even from a buffer outside it,
 whose own project lookup would find another session or none."

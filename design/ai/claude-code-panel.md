@@ -59,10 +59,15 @@ The file reported is the one you were last in, vault or not. Tracking only vault
 files left the last of them reported, and re-asserted after every prompt, while
 you worked in the info-triage queue, which lives outside the vault. The package
 never reports such files and its sender finds the session by the current
-buffer's project, so those sends go to the vault's session explicitly. A file
-that is a person's view of a file meant for agents (the queue, beside
-`triage.md`) names the substitute through `ps/claude-report-file-functions`,
-declared by the module that owns it rather than known to `ps-claude.el`.
+buffer's project, so those sends go to the vault's session explicitly. The
+module that owns a file can override what is reported for it through
+`ps/claude-report-file-functions`, rather than `ps-claude.el` knowing about it:
+another file in its place, or `:none` for no file at all. The info-triage queue
+answers `:none`. Reporting `triage.md` or the item under the cursor in its place
+was tried and was noise: the badge stayed while nothing was selected, and a bare
+`/route` acted on that one item. "No file" is sent as an empty path rather than
+as silence, because the CLI shows no badge and attaches nothing for an empty
+path, so it clears the last file shown.
 
 **Files Claude writes are re-read quietly.** When Claude visits a file it just
 wrote before auto-revert has caught up, `find-file-noselect` would ask "Reread

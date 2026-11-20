@@ -118,9 +118,11 @@ of file opens and how folder listings work.
 To work one window at a time instead, with =‹= to get back to the list, turn
 =ps/info-triage-open-beside= off.
 
-*Asking the assistant about an item.* With the cursor on an item in the queue,
-the [[file:AI-integration.org][assistant panel]] is told about that item, so you can click into it and ask
-about "this". Between items it is told about the whole inbox.
+*Asking the assistant about items.* The [[file:AI-integration.org][assistant panel]] is never told about the
+queue, not even about lines you select in it, so while you are in the queue the
+panel shows no file. Name what you mean instead: =/route triage= for the whole
+inbox, or "route items 3, 5 and 10". To ask about one item, open it — the
+item's own file is reported like any other.
 
 Audio is not opened at all — the transcript beside it is the readable copy. An
 item whose payload is twenty photos is one a file browser handles better: =e=

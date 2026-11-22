@@ -1,27 +1,29 @@
 {
-  "tag": "M3-6e5323f90844",
+  "tag": "F1-df69a05fab6d",
   "format": 1,
-  "method": "M3",
-  "source": "task-concept-retrieval@6db6c8f",
+  "method": "F1",
+  "source": "task-concept-retrieval@750e87fe",
+  "descriptions": "v2",
   "icons": "names.txt",
   "encoder": {
-    "name": "intfloat/multilingual-e5-small (Xenova ONNX, fp16)",
+    "name": "F1@all-large-all3k (fine-tuned intfloat/multilingual-e5-large, ONNX fp16)",
     "model": {
-      "url": "https://huggingface.co/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/onnx/model_fp16.onnx",
-      "sha256": "0e0fe349c99ea21c6f3aa273af21f7fb753c1e1174ef1647032029c2be3251c3",
-      "size": 235336732
+      "url": "https://huggingface.co/AntonDergunov/task-icon-encoder-e5-large-interim/resolve/main/model_fp16.onnx",
+      "sha256": "b2a3e905e0cf45b914adc0f138222f6a67ab4d417f6126cb85636036ae9aeffd",
+      "size": 1118272900
     },
     "tokenizer": {
-      "url": "https://huggingface.co/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/tokenizer.json",
-      "sha256": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39",
-      "size": 17082730
+      "url": "https://huggingface.co/AntonDergunov/task-icon-encoder-e5-large-interim/resolve/main/tokenizer.json",
+      "sha256": "917794ae198f6d09d709b56c8a1658a49136d0c6145b4b7fd0a4df27d37be952",
+      "size": 9581584
     },
     "query_prefix": "query: ",
-    "max_length": 512
+    "max_length": 64
   },
   "query": {
     "inputs": [
-      "title"
+      "title",
+      "parents"
     ],
     "normalize": "org-plain",
     "body_chars": 400
@@ -30,14 +32,20 @@
     "matrix": "dense.npy",
     "prior": "prior.npy"
   },
-  "bm25": {
-    "matrix": "bm25.npz",
-    "token_pattern": "[^\\W_]+",
-    "saturation": 8.0
-  },
+  "bm25": null,
   "fusion": {
     "rrf_k": 60,
     "pool": 50,
-    "threshold": 3.6
+    "threshold": 3.1629
+  },
+  "gate": {
+    "min_prob": 0.2,
+    "fitted_on": "silver dev 2026-11-22-extra, F1@all-large-all3k.v2+parent, 3230 tasks, acceptable = judge grade >= 2",
+    "platt": [
+      1.1237,
+      -4.9404
+    ],
+    "coverage": 1.0,
+    "precision": 0.714
   }
 }

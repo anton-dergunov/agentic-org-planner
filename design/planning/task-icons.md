@@ -23,15 +23,23 @@ evaluation and training. It is too large to live in a configuration.
 **The matcher is built in a separate project and shipped as a bundle.** The
 task-concept-retrieval research project creates, evaluates and exports
 matchers. This repository takes none of its code, only its output: a directory
-of precomputed icon data plus a `manifest.json`. The current bundle is that
-project's M3 method:
-- BM25 over LLM-written icon descriptions;
-- a field-weighted multilingual-e5-small bi-encoder with a quality prior;
-- the two fused by reciprocal rank, with an abstention gate.
+of precomputed icon data plus a `manifest.json`. The current bundle (since
+2026-11-22) is that project's F1@all-large-all3k:
+- multilingual-e5-large fine-tuned as a dual encoder on LLM-judged tasks;
+- it reads the title with its nearest parent heading;
+- dense only: one icon matrix, no BM25 and no prior;
+- an abstention gate set deliberately low for now, so almost every task shows an
+  icon.
 
-Everything on the icon side is precomputed:
-- the bi-encoder's per-field cosines collapse into one matrix;
-- BM25 collapses into a sparse term-by-icon matrix.
+Its encoder is a public interim model on Hugging Face (fp16 ONNX, 1.1 GB). The
+runner needs no change for it: it already ran dense-only bundles and read
+parents when the manifest lists them.
+
+The earlier bundle was M3: BM25 over LLM-written icon descriptions, fused by
+reciprocal rank with an untuned multilingual-e5-small. Everything on the icon
+side is precomputed:
+- the bi-encoder's cosines collapse into one matrix;
+- M3's BM25 collapsed into a sparse term-by-icon matrix.
 
 At run time only the task text is encoded. The export and its checks are
 documented in that project's `docs/deployment.md`.
@@ -106,9 +114,10 @@ without the font, and in the Tasks view, which turns task icons off.
 
 - **A Python-free runtime.** Research only; see below.
 - **Better matches.** Quality is the research project's job; a new bundle is
-  dropped into `icons/task-matcher/`. One known M3 weakness: an exact
-  reciprocal-rank tie goes to BM25, so a stray word match (the Spanish "a"
-  against a letter-A glyph) can beat the bi-encoder's pick.
+  dropped into `icons/task-matcher/`. The F1 bundle costs about 120–200 ms per
+  task on a busy M1 and about 2 GB of memory while the runner runs. Loading the
+  model takes about 4 s, so a long-lived runner process would hide that if
+  renders ever start to wait for it.
 
 ## Research: running the matcher without Python
 
@@ -138,8 +147,8 @@ toolchain.
   exporter).** Export encoder + mean pool + normalize + the icon-matrix
   multiply + prior + gate statistics + top-k as one ONNX graph. The module then
   returns the few best icons and the gate signal, and Elisp does almost nothing.
-  The BM25 half runs in Elisp over the query's own terms only, which is cheap.
-  Or it goes away once a fine-tuned model beats M3.
+  The current F1 bundle has no BM25 half; an M3-style bundle would run BM25 in
+  Elisp over the query's own terms only, which is cheap.
 - **A pure-Elisp tokenizer (1–2 days).** multilingual-e5 uses XLM-R's
   SentencePiece unigram model:
   - NFKC normalization (`ucs-normalize`);

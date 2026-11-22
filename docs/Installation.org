@@ -195,9 +195,10 @@ pip install -r ~/.emacs.d/requirements.txt
 #+end_src
 
 The first time the agenda opens, the language model the matcher uses (about
-250 MB, the public =multilingual-e5-small= model) is downloaded once from
-Hugging Face into =~/.cache/ps-task-icons/=; no account is needed. Icons appear
-when it is done.
+1.1 GB, a public =multilingual-e5-large= model fine-tuned to match tasks to
+icons) is downloaded once from Hugging Face into =~/.cache/ps-task-icons/=; no
+account is needed. Icons appear when it is done. While it runs, the matcher
+takes about 2 GB of memory for a few seconds.
 
 Without Python, the packages or the download, the config still loads: tasks
 simply show no icon, and one message says why — for example which packages to

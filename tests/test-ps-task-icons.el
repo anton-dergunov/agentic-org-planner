@@ -9,6 +9,7 @@
 ;; Declare special so a `let' binding below is dynamic (org-agenda may be
 ;; unloaded in batch, leaving the symbol otherwise lexical here).
 (defvar org-agenda-finalize-hook)
+(defvar my-org-base-directory)
 
 ;;; Helpers
 
@@ -21,7 +22,9 @@ The cache, its file and the manifest memo are fresh for BODY."
           (ps/task-icons-cache-file (expand-file-name "cache.json" dir))
           (ps/task-icons--manifest nil)
           (ps/task-icons--cache nil)
-          (ps/task-icons--cache-loaded-tag nil))
+          (ps/task-icons--cache-loaded-tag nil)
+          ;; No vault, so a cache save writes no vault copy anywhere real.
+          (my-org-base-directory nil))
      (unwind-protect
          (progn
            (with-temp-file (expand-file-name "manifest.json" dir) (insert ,manifest))
@@ -263,5 +266,206 @@ planning line and drawers."
     (should ps/task-icons--failed-at)
     (should (null ps/task-icons--process))
     (should (= (length (process-list)) before))))
+
+;;; -------------------------------------------------------
+;;; vault copy (read by Rumbo)
+;;; -------------------------------------------------------
+
+(defmacro ps/task-icons-test--with-vault (files &rest body)
+  "Run BODY with a temporary vault holding FILES, an alist (NAME . TEXT).
+Binds `vault-file' to the vault copy's path.  Buffers visited in the vault are
+killed afterwards."
+  (declare (indent 1))
+  `(let* ((vault (file-name-as-directory (make-temp-file "task-icons-vault" t)))
+          (my-org-base-directory vault)
+          (ps/org-files-root nil)
+          (ps/task-icons-enabled t)
+          (ps/task-icons--export-last-failure nil)
+          (ps/task-icons--failed-at nil)
+          (vault-file (expand-file-name ".ps/task-icons.json" vault)))
+     (ignore vault-file)
+     (unwind-protect
+         (progn
+           (pcase-dolist (`(,name . ,text) ,files)
+             (let ((file (expand-file-name name vault)))
+               (make-directory (file-name-directory file) t)
+               (with-temp-file file (insert text))))
+           ,@body)
+       (dolist (buffer (buffer-list))
+         (when (and (buffer-file-name buffer)
+                    (string-prefix-p vault (buffer-file-name buffer)))
+           (with-current-buffer buffer (set-buffer-modified-p nil))
+           (kill-buffer buffer)))
+       (delete-directory vault t))))
+
+(defun ps/task-icons-test--read-json (file)
+  "FILE parsed as JSON, as hash tables."
+  (with-temp-buffer
+    (let ((coding-system-for-read 'utf-8-unix)) (insert-file-contents file))
+    (json-parse-buffer :object-type 'hash-table)))
+
+(defun ps/task-icons-test--map-keys (file)
+  "The sorted keys of FILE's `map'."
+  (sort (hash-table-keys (gethash "map" (ps/task-icons-test--read-json file)))
+        #'string<))
+
+(defconst ps/task-icons-test--vault-a
+  '(("Health.org" . "* Health\n** TODO See the dentist\n** DONE Get a flu shot\n")
+    ("Plans/Events.org" . "* Events\n** Concert in the park\n")
+    ("Archive/Old.org" . "* Health\n** TODO Archived task\n"))
+  "A vault: two scanned files and one archived (excluded) file.")
+
+(defun ps/task-icons-test--put (title parents icon)
+  "Cache ICON for the task TITLE under PARENTS (a list); return its key."
+  (let ((key (ps/task-icons--key `((title . ,title) (parents . ,(vconcat parents))))))
+    (ps/task-icons--cache-put key icon)
+    key))
+
+(ert-deftest ps/task-icons--vault-json-format ()
+  "One entry per line, sorted by key, \"\" kept, LF-terminated."
+  (let ((map (make-hash-table :test 'equal)))
+    (puthash "{\"title\":\"B\"}" "" map)
+    (puthash "{\"title\":\"A\"}" "savings" map)
+    (should (equal (ps/task-icons--vault-json "t" '("title") map)
+                   (concat "{\"tag\":\"t\",\"inputs\":[\"title\"],\"map\":{\n"
+                           "\"{\\\"title\\\":\\\"A\\\"}\":\"savings\",\n"
+                           "\"{\\\"title\\\":\\\"B\\\"}\":\"\"}}\n")))))
+
+(ert-deftest ps/task-icons--vault-json-roundtrips ()
+  "The text parses back to the same tag, inputs and map, non-ASCII included."
+  (let ((map (make-hash-table :test 'equal))
+        (key (ps/task-icons--key ps/task-icons-test--non-ascii)))
+    (puthash key "vaccines" map)
+    (puthash "{\"title\":\"Nothing fits\"}" "" map)
+    (let* ((text (ps/task-icons--vault-json "t" '("title" "parents") map))
+           (data (json-parse-string text :object-type 'hash-table)))
+      (should (multibyte-string-p text))
+      (should (= (length (split-string text "\n" t)) 3))
+      (should (equal (gethash "tag" data) "t"))
+      (should (equal (gethash "inputs" data) ["title" "parents"]))
+      (should (equal (gethash key (gethash "map" data)) "vaccines"))
+      (should (equal (gethash "{\"title\":\"Nothing fits\"}" (gethash "map" data)) "")))))
+
+(ert-deftest ps/task-icons--vault-json-empty-map ()
+  "An empty map is still valid JSON."
+  (let ((text (ps/task-icons--vault-json "t" '("title") (make-hash-table :test 'equal))))
+    (should (equal text "{\"tag\":\"t\",\"inputs\":[\"title\"],\"map\":{\n}}\n"))
+    (should (= (hash-table-count
+                (gethash "map" (json-parse-string text :object-type 'hash-table)))
+               0))))
+
+(ert-deftest ps/task-icons--vault-export-only-this-vault ()
+  "Only entries for headings in this vault's scanned files are written:
+another vault's task, a deleted task, the same title under another parent and
+an archived task are all left out; DONE and plain headings stay in."
+  (ps/task-icons-test--with-bundle (ps/task-icons-test--manifest "t" "title" "parents")
+    (ps/task-icons-test--with-vault ps/task-icons-test--vault-a
+      (let ((keep (list (ps/task-icons-test--put "See the dentist" '("Health") "dentistry")
+                        (ps/task-icons-test--put "Get a flu shot" '("Health") "vaccines")
+                        (ps/task-icons-test--put "Concert in the park" '("Events") ""))))
+        (ps/task-icons-test--put "Secret task of another vault" '("Work") "lock")
+        (ps/task-icons-test--put "Deleted task" '("Health") "delete")
+        (ps/task-icons-test--put "See the dentist" '("Elsewhere") "dentistry")
+        (ps/task-icons-test--put "Archived task" '("Health") "archive")
+        (should (ps/task-icons-vault-export))
+        (should (equal (ps/task-icons-test--map-keys vault-file)
+                       (sort (copy-sequence keep) #'string<)))
+        (let ((data (ps/task-icons-test--read-json vault-file)))
+          (should (equal (gethash "tag" data) "t"))
+          (should (equal (gethash "inputs" data) ["title" "parents"]))
+          (should (equal (gethash (car (last keep)) (gethash "map" data)) "")))))))
+
+(ert-deftest ps/task-icons--vault-export-keys-match-agenda ()
+  "A key in the copy is the key the agenda builds for the same heading."
+  (ps/task-icons-test--with-bundle (ps/task-icons-test--manifest "t" "title" "parents")
+    (ps/task-icons-test--with-vault
+        '(("Teeth.org" . "* Teeth [1/2]\n** TODO [#A] Book a *dentist* appointment   :phone:\n"))
+      (let ((key (with-current-buffer
+                     (find-file-noselect (expand-file-name "Teeth.org" vault))
+                   (goto-char (point-min))
+                   (re-search-forward "Book")
+                   (ps/task-icons--key
+                    (ps/task-icons--task-at-marker (point-marker) '("title" "parents"))))))
+        (should (equal key "{\"title\":\"Book a *dentist* appointment\",\"parents\":[\"Teeth\"]}"))
+        (ps/task-icons--cache-put key "dentistry")
+        (ps/task-icons-vault-export)
+        (should (equal (ps/task-icons-test--map-keys vault-file) (list key)))))))
+
+(ert-deftest ps/task-icons--vault-export-skips-unchanged ()
+  "Exporting the same content again does not touch the file."
+  (ps/task-icons-test--with-bundle (ps/task-icons-test--manifest "t" "title" "parents")
+    (ps/task-icons-test--with-vault ps/task-icons-test--vault-a
+      (ps/task-icons-test--put "See the dentist" '("Health") "dentistry")
+      (should (ps/task-icons-vault-export))
+      (set-file-times vault-file (time-subtract (current-time) 1000))
+      (let ((before (file-attribute-modification-time (file-attributes vault-file))))
+        (should-not (ps/task-icons-vault-export))
+        (should (time-equal-p before (file-attribute-modification-time
+                                      (file-attributes vault-file)))))
+      ;; A changed icon is written.
+      (ps/task-icons-test--put "See the dentist" '("Health") "medical_services")
+      (should (ps/task-icons-vault-export)))))
+
+(ert-deftest ps/task-icons--vault-export-renames-into-place ()
+  "The copy is written to a temporary file in .ps/ and renamed over the old one."
+  (ps/task-icons-test--with-bundle (ps/task-icons-test--manifest "t" "title" "parents")
+    (ps/task-icons-test--with-vault ps/task-icons-test--vault-a
+      (ps/task-icons-test--put "See the dentist" '("Health") "dentistry")
+      (let ((rename (symbol-function 'rename-file))
+            (renames '()))
+        (cl-letf (((symbol-function 'rename-file)
+                   (lambda (from to &optional ok)
+                     (push (list from to) renames)
+                     (funcall rename from to ok))))
+          (should (ps/task-icons-vault-export)))
+        (should (= (length renames) 1))
+        (pcase-let ((`(,from ,to) (car renames)))
+          (should (equal to vault-file))
+          (should (equal (file-name-directory from) (file-name-directory vault-file)))
+          (should-not (file-exists-p from)))
+        (should (equal (directory-files (file-name-directory vault-file) nil "\\`[^.]\\|\\`\\.[^.]")
+                       '("task-icons.json")))))))
+
+(ert-deftest ps/task-icons--vault-export-failure-is-quiet ()
+  "A failed write keeps the old file, leaves no temporary file, never signals,
+is reported once, and does not hold back the matcher."
+  (ps/task-icons-test--with-bundle (ps/task-icons-test--manifest "t" "title" "parents")
+    (ps/task-icons-test--with-vault ps/task-icons-test--vault-a
+      (ps/task-icons-test--put "See the dentist" '("Health") "dentistry")
+      (ps/task-icons-vault-export)
+      (let ((old (with-temp-buffer (insert-file-contents vault-file) (buffer-string)))
+            (messages '()))
+        (ps/task-icons-test--put "See the dentist" '("Health") "medical_services")
+        (cl-letf (((symbol-function 'rename-file)
+                   (lambda (&rest _) (error "Disk full")))
+                  ((symbol-function 'message)
+                   (lambda (fmt &rest args) (push (apply #'format fmt args) messages))))
+          (should-not (ps/task-icons-vault-export))
+          (should-not (ps/task-icons-vault-export)))
+        (should (equal old (with-temp-buffer (insert-file-contents vault-file) (buffer-string))))
+        (should (equal (directory-files (file-name-directory vault-file) nil "\\`[^.]\\|\\`\\.[^.]")
+                       '("task-icons.json")))
+        (should (= (length messages) 1))
+        (should (string-match-p "Disk full" (car messages)))
+        (should (null ps/task-icons--failed-at))))))
+
+(ert-deftest ps/task-icons--vault-export-needs-a-vault ()
+  "Without an open vault, or with the feature off, nothing is written."
+  (ps/task-icons-test--with-bundle (ps/task-icons-test--manifest "t")
+    (ps/task-icons--cache-put "{\"title\":\"A\"}" "savings")
+    (should-not (ps/task-icons-vault-export)))
+  (ps/task-icons-test--with-bundle (ps/task-icons-test--manifest "t" "title" "parents")
+    (ps/task-icons-test--with-vault ps/task-icons-test--vault-a
+      (let ((ps/task-icons-enabled nil))
+        (should-not (ps/task-icons-vault-export))
+        (should-not (file-exists-p vault-file))))))
+
+(ert-deftest ps/task-icons--cache-save-writes-vault-copy ()
+  "Saving the cache also refreshes the vault copy."
+  (ps/task-icons-test--with-bundle (ps/task-icons-test--manifest "t" "title" "parents")
+    (ps/task-icons-test--with-vault ps/task-icons-test--vault-a
+      (ps/task-icons-test--put "See the dentist" '("Health") "dentistry")
+      (ps/task-icons--cache-save)
+      (should (= (length (ps/task-icons-test--map-keys vault-file)) 1)))))
 
 ;;; test-ps-task-icons.el ends here

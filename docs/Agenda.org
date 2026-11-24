@@ -149,7 +149,9 @@ appears next to the title. Click it to open the full [[file:Planning-tools.org][
   =ps/task-icons-enabled= in =config.org= → /Settings → Agenda task icons/. They
   are chosen by =scripts/org_task_icon_matcher.py= (installing it: see
   [[file:Installation.org][Installation]]) and remembered, so a task is matched only once; they are
-  left out of the Tasks view.
+  left out of the Tasks view. The icons of this vault's tasks are also written
+  to =.ps/task-icons.json= in the vault, which syncs with it, so the mobile app
+  shows the same icons.
 - The schedule view is =lisp/ps-schedule-view.el=; defaults
   (=ps/schedule-view-style=, =ps/schedule-view-auto-refresh=) are in =config.org=
   → /Schedule view/.

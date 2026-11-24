@@ -22,12 +22,31 @@
 ;; is refreshed when the answers arrive.  This module owns the icon *names*;
 ;; `ps-agenda-layout' draws them (`ps/task-icons-name-at-point').
 ;;
+;; The cache lives outside the vault, so Rumbo (the phone and tablet app for
+;; the vault, which syncs through its git repository) cannot see it.  A copy,
+;; `<vault>/.ps/task-icons.json', is written after every render and every
+;; cache save, and git sync commits it like any other file:
+;;   - only the entries for headings in this vault's Org files go in.  The
+;;     cache is shared by every vault, and another vault's titles must not
+;;     land in this vault's repository.  The same filter drops tasks that were
+;;     deleted or renamed, so the file does not grow forever;
+;;   - every heading counts, not only open tasks: events and DONE lines get
+;;     icons too, and a filter on the TODO state would make entries come and
+;;     go -- each a commit -- as tasks change state;
+;;   - one entry per line, sorted, written only when the text changed, and
+;;     renamed into place, since every write is a commit and the sync may run
+;;     at any moment.
+;; Rumbo rebuilds the keys from its own parse (`app/icon-keys.js' there), so
+;; `ps/task-icons--task-at-marker' and `ps/task-icons--key' are a contract.
+;;
 ;; Design: design/planning/task-icons.md.
 
 ;;; Code:
 
 (require 'seq)
 (require 'subr-x)
+(require 'ps-vault)
+(require 'ps-org-files)
 
 (declare-function org-get-at-bol "org" (property))
 (declare-function org-get-heading "org" (&optional no-tags no-todo no-priority no-comment))
@@ -38,6 +57,7 @@
 (declare-function outline-next-heading "outline" ())
 (declare-function ps/agenda-layout-refresh "ps-agenda-layout" ())
 (defvar org-agenda-finalize-hook)
+(defvar org-outline-regexp-bol)
 
 ;;; Customization
 
@@ -170,14 +190,21 @@ INPUTS defaults to the manifest's."
     (when (and (markerp marker) (marker-buffer marker))
       (ps/task-icons--task-at-marker marker (or inputs (ps/task-icons--inputs))))))
 
-(defun ps/task-icons--key (task)
-  "The cache key for TASK: its fields as JSON, as a text (multibyte) string.
+(defun ps/task-icons--json-text (object)
+  "OBJECT serialized as JSON, as a text (multibyte) string.
 `json-serialize' returns UTF-8 *bytes* (a unibyte string).  Used raw, a key for
 a title with any non-ASCII character (\"—\", Cyrillic) could not be serialized
 again for the matcher, and would never equal the same key read back from the
 cache file."
-  (let ((json (json-serialize task)))
+  (let ((json (json-serialize object)))
     (if (multibyte-string-p json) json (decode-coding-string json 'utf-8 t))))
+
+(defun ps/task-icons--key (task)
+  "The cache key for TASK: its fields as JSON, as a text string.
+Rumbo builds the same key from its own parse of the vault, so a change to the
+key, or to the fields `ps/task-icons--task-at-marker' collects, must be made
+there too (`app/icon-keys.js')."
+  (ps/task-icons--json-text task))
 
 (defun ps/task-icons--collect-tasks ()
   "The distinct tasks on the lines of the current buffer, in order."
@@ -228,7 +255,8 @@ built for."
         (puthash "map" ps/task-icons--cache data)
         (let ((coding-system-for-write 'utf-8-unix))
           (with-temp-file ps/task-icons-cache-file
-            (json-insert data)))))))
+            (json-insert data)))))
+    (ps/task-icons-vault-export)))
 
 (defun ps/task-icons--missing (tasks)
   "The members of TASKS with no cached answer (a cached \"no icon\" counts)."
@@ -251,6 +279,132 @@ built for."
   "The cached icon name for the agenda line at point, or nil."
   (when (and ps/task-icons-enabled (ps/task-icons--tag))
     (ps/task-icons-lookup (ps/task-icons--line-task))))
+
+;;; Vault copy (read by Rumbo)
+
+(defconst ps/task-icons--vault-file-name ".ps/task-icons.json"
+  "Where, relative to the vault root, the vault's copy of its icons is written.
+Beside `ps/vault-state-file', inside the vault so its git sync commits it.")
+
+(defvar ps/task-icons--export-last-failure nil
+  "The reason last reported for a failed vault copy, so it is reported once.")
+
+(defun ps/task-icons--vault-file ()
+  "The vault copy's path in the open vault, or nil when no vault is open."
+  (when (ps/vault-configured-p)
+    (expand-file-name ps/task-icons--vault-file-name (ps/vault-current))))
+
+(defun ps/task-icons--json-string (string)
+  "STRING as a JSON string literal, as text.
+Serialized inside a vector and unwrapped, since Emacs 29's `json-serialize'
+takes only an array or an object."
+  (let ((json (ps/task-icons--json-text (vector string))))
+    (substring json 1 -1)))
+
+(defun ps/task-icons--cached-titles (cache)
+  "The titles of the tasks CACHE holds answers for, as a hash set."
+  (let ((titles (make-hash-table :test 'equal)))
+    (maphash (lambda (key _icon)
+               (let ((fields (ignore-errors
+                               (json-parse-string key :object-type 'hash-table))))
+                 (when-let ((title (and (hash-table-p fields) (gethash "title" fields))))
+                   (puthash title t titles))))
+             cache)
+    titles))
+
+(defun ps/task-icons--vault-keys (files cache inputs)
+  "The keys in CACHE of the headings in FILES, as a hash set.
+Each heading's key is built as the agenda builds it, from the fields INPUTS
+names, but only for a heading whose title CACHE knows, so a walk over every
+heading of a vault stays cheap.  Walks `org-outline-regexp-bol' rather than
+`org-heading-regexp' (see `ps-done')."
+  (let ((titles (ps/task-icons--cached-titles cache))
+        (keys (make-hash-table :test 'equal)))
+    (when (> (hash-table-count titles) 0)
+      (dolist (file files)
+        (with-current-buffer (find-file-noselect file)
+          (save-excursion
+            (save-restriction
+              (widen)
+              (goto-char (point-min))
+              (while (re-search-forward org-outline-regexp-bol nil t)
+                (let ((title (org-get-heading t t t t)))
+                  (when (and (stringp title)
+                             (gethash (string-trim (substring-no-properties title))
+                                      titles))
+                    (when-let* ((task (ps/task-icons--task-at-marker (point) inputs))
+                                (key (ps/task-icons--key task)))
+                      (when (gethash key cache)
+                        (puthash key t keys)))))))))))
+    keys))
+
+(defun ps/task-icons--vault-json (tag inputs map)
+  "The text of the vault copy for TAG, INPUTS and MAP (key -> icon or \"\").
+One map entry per line, sorted by key, so a changed icon is a one-line diff
+and two machines that know the same tasks write the same text."
+  (let (entries)
+    (maphash (lambda (key icon) (push (cons key icon) entries)) map)
+    (setq entries (sort entries (lambda (a b) (string< (car a) (car b)))))
+    (concat "{\"tag\":" (ps/task-icons--json-string tag)
+            ",\"inputs\":" (ps/task-icons--json-text (vconcat inputs))
+            ",\"map\":{\n"
+            (mapconcat (lambda (entry)
+                         (concat (ps/task-icons--json-string (car entry)) ":"
+                                 (ps/task-icons--json-string (cdr entry))))
+                       entries ",\n")
+            "}}\n")))
+
+(defun ps/task-icons--write-atomically (file content)
+  "Write CONTENT to FILE unless FILE already holds it; non-nil when written.
+CONTENT goes to a temporary file beside FILE, which is then renamed over it:
+the vault's git sync may commit at any moment and must never see half a file.
+The comparison is with the file on disk, so it holds across restarts, vault
+switches and the other machine's writes."
+  (unless (and (file-readable-p file)
+               (equal content
+                      (with-temp-buffer
+                        (let ((coding-system-for-read 'utf-8-unix))
+                          (insert-file-contents file))
+                        (buffer-string))))
+    (let ((dir (file-name-directory file)))
+      (make-directory dir t)
+      (let ((temp (make-temp-file
+                   (expand-file-name (concat "." (file-name-nondirectory file) "-")
+                                     dir))))
+        (unwind-protect
+            (let ((coding-system-for-write 'utf-8-unix))
+              (write-region content nil temp nil 'silent)
+              (rename-file temp file t))
+          (when (file-exists-p temp)
+            (delete-file temp)))))
+    t))
+
+(defun ps/task-icons-vault-export ()
+  "Write the open vault's task icons to its `.ps/task-icons.json'.
+Read by Rumbo, which cannot see the cache.  Only entries for headings in this
+vault's Org files are written (see the Commentary).  Returns non-nil when the
+file was written.  Never signals: a failure is reported once per reason and
+otherwise ignored, and -- unlike a matcher failure -- does not hold back the
+matcher."
+  (when-let* ((_ ps/task-icons-enabled)
+              (tag (ps/task-icons--tag))
+              (file (ps/task-icons--vault-file)))
+    (condition-case err
+        (let* ((cache (ps/task-icons--cache-load))
+               (inputs (ps/task-icons--inputs))
+               (keys (ps/task-icons--vault-keys (ps/org-files-all) cache inputs))
+               (map (make-hash-table :test 'equal)))
+          (maphash (lambda (key _) (puthash key (gethash key cache) map)) keys)
+          (prog1 (ps/task-icons--write-atomically
+                  file (ps/task-icons--vault-json tag inputs map))
+            (setq ps/task-icons--export-last-failure nil)))
+      (error
+       (let ((reason (error-message-string err)))
+         (unless (equal reason ps/task-icons--export-last-failure)
+           (setq ps/task-icons--export-last-failure reason)
+           (message "[task-icons] Could not write %s: %s"
+                    ps/task-icons--vault-file-name reason)))
+       nil))))
 
 ;;; Async matcher process
 
@@ -356,9 +510,12 @@ a task that cannot be serialized fails without leaving a process behind."
 (defun ps/task-icons--ensure ()
   "Match any uncached agenda tasks, then refresh the layout.
 Cached icons are already drawn by the layout's own render; this only starts
-the matcher for what is missing, and re-renders once the answers arrive."
+the matcher for what is missing, and re-renders once the answers arrive.
+The vault copy is refreshed first, so it follows a warm cache too: a deleted
+task leaves it, and a new vault gets one, without waiting for a matcher run."
   (when-let ((buffer (get-buffer "*Org Agenda*")))
     (with-current-buffer buffer
+      (ps/task-icons-vault-export)
       (when (and ps/task-icons-enabled (ps/task-icons--may-run-p))
         (let ((missing (ps/task-icons--missing (ps/task-icons--collect-tasks))))
           (when missing

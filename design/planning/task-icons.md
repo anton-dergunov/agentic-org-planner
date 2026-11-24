@@ -4,7 +4,7 @@ A Material Symbols icon for what each agenda task is about, chosen by a matcher
 that is built elsewhere and only run here.
 
 **Status:** built; the Python-free runtime is research
-**Code:** `lisp/ps-task-icons.el` (names, cache, async runs), drawn by
+**Code:** `lisp/ps-task-icons.el` (names, cache, async runs, the vault copy), drawn by
 `lisp/ps-agenda-layout.el` and `lisp/ps-schedule-view.el`;
 `scripts/org_task_icon_matcher.py` (the runner); `icons/task-matcher/` (the
 bundle); settings block `** Agenda task icons (ps-task-icons.el)`. User docs:
@@ -79,6 +79,38 @@ shown as is (for example, the `pip install` to run), and it is reported once
 per distinct reason. The runner is then not restarted for ten minutes, so it
 does not respawn on every render.
 
+**The vault gets a copy for Rumbo.** Rumbo, the phone and tablet app for the
+vault, syncs through the vault's git repository and shows the same icons. The
+cache lives in `~/.cache/`, outside the vault, so after every agenda render and
+every cache save Emacs writes `<vault>/.ps/task-icons.json`, and git sync
+commits it like any other file. It holds the bundle's `tag`, the manifest's
+`query.inputs` (Rumbo builds its keys from that list, so a bundle that reads
+more fields makes it fall back to its own guesses), and a `map` of cache keys to
+icon names, `""` meaning "no icon". Rumbo's own on-device model covers tasks
+the copy doesn't have yet, so the copy only has to be correct and private, not
+complete or immediate.
+- **Only this vault's headings.** The cache is shared by every vault in the
+  registry. Only entries whose key is built from a heading in this vault's
+  scanned files (`ps/org-files-all`) are written, so another vault's titles
+  never land in this vault's repository. The same filter drops deleted and
+  renamed tasks, so the file stays bounded.
+- **Every heading, not only open tasks.** The agenda gives icons to events and
+  DONE lines too, and a filter on the TODO state would make entries come and go,
+  each a commit, as tasks change state. It is `ps/org-files-all` rather than
+  `org-agenda-files` for the same reason: a file-tree filter narrows the latter.
+- **One entry per line, sorted by key,** so a changed icon is a one-line diff
+  and two machines that know the same tasks write the same text.
+- **Written only when the text differs from the file on disk, and renamed into
+  place** from a temporary file in `.ps/`, since every write is a commit and the
+  sync may run at any moment.
+- **A failed write is reported once and otherwise ignored.** It doesn't hold
+  back the matcher, as a matcher failure does.
+- **Written after every render, not only after a cache save.** A cache save
+  happens only when the matcher answers new tasks, so with a warm cache the copy
+  would never be created, and deleted tasks would never leave it. The walk only
+  builds a full key for a heading whose title the cache knows, which takes
+  about 40 ms over the real vault's 3,500 headings once its files are open.
+
 **The icon column collapses where no icon can show:** on a text terminal,
 without the font, and in the Tasks view, which turns task icons off.
 
@@ -107,6 +139,10 @@ without the font, and in the Tasks view, which turns task icons off.
   task (any Russian or Spanish title), all its scores are zero, and ranking them
   would hand its first vote to whichever icon sorts first. Both implementations
   skip zero scores.
+- **The key is shared with Rumbo.** Rumbo rebuilds each key from its own parse
+  of the vault (`app/icon-keys.js` there), so a change to the fields
+  `ps/task-icons--task-at-marker` collects or to how `ps/task-icons--key`
+  serializes them must be made there too.
 - **The runner mirrors `tcr/bundle.py`.** A change to query building or scoring
   must be made in both, and the project's parity check rerun.
 
